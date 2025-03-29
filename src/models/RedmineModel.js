@@ -120,17 +120,24 @@ const RedmineModel = () => {
     let allIssues = [];
     try {
       for (const { key, url } of keys) {
-        const response = await axios.get('/redmine-api/issues.json?limit=200&sort=created_on:desc&assigned_to_id=me', {
-          headers: { 'X-Redmine-API-Key': key, 'X-Target-URL': url },
+        const proxyUrl = 'https://redmine-proxy.onrender.com/redmine-api'; // URL proxy Render của bạn
+        const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc&assigned_to_id=me`, {
+          headers: {
+            'X-Redmine-API-Key': key,
+            'X-Target-URL': url,
+          },
         });
         allIssues = [...allIssues, ...(response.data.issues || [])];
       }
       allIssues = Array.from(new Map(allIssues.map(issue => [issue.id, issue])).values());
-      processIssues(allIssues, keys); // Truyền apiKeys vào processIssues
+      console.log('Fetched issues:', allIssues);
+      processIssues(allIssues, keys);
       localStorage.setItem(CACHE_KEY, JSON.stringify(allIssues));
       localStorage.setItem(`${CACHE_KEY}_time`, new Date().getTime());
     } catch (error) {
       console.error('Error fetching issues:', error);
+      setNearDueIssues([]);
+      setFilteredIssues([]);
     } finally {
       setLoading(false);
     }
