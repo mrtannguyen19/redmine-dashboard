@@ -121,7 +121,7 @@ const RedmineModel = () => {
     try {
       for (const { key, url } of keys) {
         const proxyUrl = 'https://redmine-proxy.onrender.com/redmine-api'; // URL proxy Render của bạn
-        const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc&assigned_to_id=me`, {
+        const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc`, {
           headers: {
             'X-Redmine-API-Key': key,
             'X-Target-URL': url,
