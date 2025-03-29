@@ -8,10 +8,10 @@ const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 const RedmineModel = (apiKeysFile) => {
   const [nearDueIssues, setNearDueIssues] = useState([]);
   const [filteredIssues, setFilteredIssues] = useState([]);
-  const [projectData, setProjectData] = useState({});
-  const [dueDateData, setDueDateData] = useState({});
-  const [priorityData, setPriorityData] = useState({});
-  const [projectFjnErrorData, setProjectFjnErrorData] = useState({});
+  const [projectData, setProjectData] = useState({ labels: [], datasets: [] });
+  const [dueDateData, setDueDateData] = useState({ labels: [], datasets: [] });
+  const [priorityData, setPriorityData] = useState({ labels: [], datasets: [] });
+  const [projectFjnErrorData, setProjectFjnErrorData] = useState({ labels: [], datasets: [] });
   const [selectedFilter, setSelectedFilter] = useState(null);
   const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState([]);
@@ -38,23 +38,28 @@ const RedmineModel = (apiKeysFile) => {
   const [showAllCharts, setShowAllCharts] = useState(true);
 
   const processIssues = (issues, apiKeys) => {
-    if (!Array.isArray(issues)) {
-      console.error('processIssues: issues is not an array', issues);
+    if (!Array.isArray(issues) || issues.length === 0) {
+      console.error('processIssues: issues is not an array or is empty', issues);
       setNearDueIssues([]);
       setFilteredIssues([]);
+      setProjectData({ labels: [], datasets: [] });
+      setDueDateData({ labels: [], datasets: [] });
+      setPriorityData({ labels: [], datasets: [] });
+      setProjectFjnErrorData({ labels: [], datasets: [] });
       return;
     }
-
+  
     const issuesWithUrl = issues.map(issue => {
-      const projectName = issue.project.name;
-      const apiKey = apiKeys.find(key => key.project === projectName);
-      const redmineUrl = apiKey ? `${apiKey.url}/issues/${issue.id}` : '#';
+      const projectName = issue.project?.name || 'Unknown';
+      const apiKey = apiKeys.find(key => key.project === projectName) || {};
+      const redmineUrl = apiKey.url ? `${apiKey.url}/issues/${issue.id}` : '#';
       return { ...issue, redmineUrl };
     });
-
+  
     setNearDueIssues(issuesWithUrl);
     setFilteredIssues(issuesWithUrl);
-
+  
+    // Project Data
     const projectCount = issuesWithUrl.reduce((acc, issue) => {
       acc[issue.project.name] = (acc[issue.project.name] || 0) + 1;
       return acc;
@@ -63,7 +68,8 @@ const RedmineModel = (apiKeysFile) => {
       labels: Object.keys(projectCount),
       datasets: [{ label: 'プロジェクトごとの課題数', data: Object.values(projectCount), backgroundColor: '#36A2EB', borderColor: '#36A2EB', borderWidth: 1 }],
     });
-
+  
+    // Due Date Data
     const responseDueDates = issuesWithUrl.map((issue) => getCustomFieldValue(issue.custom_fields, '回答納期')).filter(date => date !== 'N/A');
     const dueDateCount = responseDueDates.reduce((acc, date) => {
       acc[date] = (acc[date] || 0) + 1;
@@ -75,19 +81,21 @@ const RedmineModel = (apiKeysFile) => {
       labels: sortedDueDates.map(([date]) => date),
       datasets: [{ label: '回答納期ごとの課題数', data: sortedDueDates.map(([, count]) => count), backgroundColor: '#FF6384', borderColor: '#FF6384', borderWidth: 1 }],
     });
-
+  
+    // Priority Data
     const priorityCount = issuesWithUrl.reduce((acc, issue) => {
-      acc[issue.priority.name] = (acc[issue.priority.name] || 0) + 1;
+      acc[issue.priority?.name || 'Unknown'] = (acc[issue.priority?.name || 'Unknown'] || 0) + 1;
       return acc;
     }, {});
     setPriorityData({
       labels: Object.keys(priorityCount),
       datasets: [{ data: Object.values(priorityCount), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50'] }],
     });
-
+  
+    // Project FJN Error Data
     const projectFjnErrorCount = {};
     issuesWithUrl.forEach((issue) => {
-      const project = issue.project.name;
+      const project = issue.project?.name || 'Unknown';
       const fjnErrorType = getCustomFieldValue(issue.custom_fields, 'FJN側障害種別');
       if (!projectFjnErrorCount[project]) projectFjnErrorCount[project] = {};
       projectFjnErrorCount[project][fjnErrorType] = (projectFjnErrorCount[project][fjnErrorType] || 0) + 1;

@@ -43,7 +43,7 @@ function App() {
       <Typography variant="h6" gutterBottom sx={{ color: '#555' }}>
         Thống Kê (Tổng: {model.nearDueIssues.length} issues)
       </Typography>
-      {/* Phần còn lại giữ nguyên */}
+
       <Box sx={{ mb: 3 }}>
         <FormControlLabel
           control={<Checkbox checked={model.showAllCharts} onChange={controller.handleToggleAllCharts} />}
@@ -51,10 +51,13 @@ function App() {
           sx={{ '& .MuiFormControlLabel-label': { fontWeight: 'bold' } }}
         />
       </Box>
+
       {model.showAllCharts && (
-        <Card sx={{ mb: 4, boxShadow: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>Biểu Đồ Thống Kê</Typography>
+        <Accordion defaultExpanded sx={{ mb: 4, boxShadow: 3 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" sx={{ color: '#1976d2' }}>Biểu Đồ Thống Kê</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
             <ChartToggle showCharts={model.showCharts} onToggle={controller.handleChartToggle} />
             <Grid container spacing={3}>
               {model.showCharts.project && (
@@ -78,9 +81,10 @@ function App() {
                 </Grid>
               )}
             </Grid>
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
       )}
+
       <Card sx={{ boxShadow: 3 }}>
         <CardContent>
           <IssueTable
