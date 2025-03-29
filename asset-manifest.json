@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/redmine-dashboard/static/css/main.e6c13ad2.css",
-    "main.js": "/redmine-dashboard/static/js/main.d03b3acc.js",
+    "main.js": "/redmine-dashboard/static/js/main.8f6ee738.js",
     "index.html": "/redmine-dashboard/index.html",
     "main.e6c13ad2.css.map": "/redmine-dashboard/static/css/main.e6c13ad2.css.map",
-    "main.d03b3acc.js.map": "/redmine-dashboard/static/js/main.d03b3acc.js.map"
+    "main.8f6ee738.js.map": "/redmine-dashboard/static/js/main.8f6ee738.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.d03b3acc.js"
+    "static/js/main.8f6ee738.js"
   ]
 }
