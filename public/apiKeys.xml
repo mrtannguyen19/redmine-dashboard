@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<apiKeys>
+    <account>
+        <project>神奈川柑橘果工</project>
+        <key>4ade0a6b73e22ece696fbdd1412a9688bac2078d</key>
+        <url>https://my.redmine.jp/ucd-sc/</url>
+    </account>
+    <account>
+        <project>興人　ＥＲＰ統合（SC・HHT)</project>
+        <key>357a2466ce0c49ce9c149709deba91217151404d</key>
+        <url>https://my.redmine.jp/ucd-sc/</url>
+    </account>
+    <account>
+        <project>不二ビューティ</project>
+        <key>fee24543c9224edcb4e268c111556d6ac87ba7d4</key>
+        <url>https://my.redmine.jp/ucd-sc/</url>
+    </account>
+    <!-- Thêm các account khác tại đây -->
+</apiKeys>
