@@ -1,6 +1,5 @@
-import React from 'react';
-import { Container, Typography, Grid, Card, CardContent, FormControlLabel, Checkbox, Box, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // Thêm import này
+import React, { useState } from 'react';
+import { Container, Typography, Grid, Card, CardContent, FormControlLabel, Checkbox, Box } from '@mui/material';
 import RedmineModel from './models/RedmineModel';
 import RedmineController from './controllers/RedmineController';
 import ProjectChart from './views/Charts/ProjectChart';
@@ -11,10 +10,16 @@ import IssueTable from './views/IssueTable';
 import ChartToggle from './views/ChartToggle';
 
 function App() {
-  const model = RedmineModel();
+  const [apiKeysFile, setApiKeysFile] = useState(null); // State để lưu file
+  const model = RedmineModel(apiKeysFile); // Truyền file vào RedmineModel
   const controller = RedmineController(model);
 
-  if (model.loading === true) {
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setApiKeysFile(file);
+  };
+
+  if (model.loading) {
     return (
       <Container maxWidth="lg" sx={{ textAlign: 'center', mt: 5 }}>
         <Typography variant="h6" color="textSecondary">Đang tải dữ liệu...</Typography>
@@ -27,10 +32,18 @@ function App() {
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#1976d2' }}>
         Redmine Dashboard
       </Typography>
+      <Box sx={{ mb: 3 }}>
+        <input type="file" accept=".xml" onChange={handleFileChange} />
+        {apiKeysFile && (
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Đã chọn file: {apiKeysFile.name}
+          </Typography>
+        )}
+      </Box>
       <Typography variant="h6" gutterBottom sx={{ color: '#555' }}>
         Thống Kê (Tổng: {model.nearDueIssues.length} issues)
       </Typography>
-
+      {/* Phần còn lại giữ nguyên */}
       <Box sx={{ mb: 3 }}>
         <FormControlLabel
           control={<Checkbox checked={model.showAllCharts} onChange={controller.handleToggleAllCharts} />}
@@ -38,13 +51,10 @@ function App() {
           sx={{ '& .MuiFormControlLabel-label': { fontWeight: 'bold' } }}
         />
       </Box>
-
       {model.showAllCharts && (
-        <Accordion defaultExpanded sx={{ mb: 4, boxShadow: 3 }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" sx={{ color: '#1976d2' }}>Biểu Đồ Thống Kê</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
+        <Card sx={{ mb: 4, boxShadow: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>Biểu Đồ Thống Kê</Typography>
             <ChartToggle showCharts={model.showCharts} onToggle={controller.handleChartToggle} />
             <Grid container spacing={3}>
               {model.showCharts.project && (
@@ -68,10 +78,9 @@ function App() {
                 </Grid>
               )}
             </Grid>
-          </AccordionDetails>
-        </Accordion>
+          </CardContent>
+        </Card>
       )}
-
       <Card sx={{ boxShadow: 3 }}>
         <CardContent>
           <IssueTable

@@ -5,7 +5,7 @@ import { getCustomFieldValue } from '../utils/helpers';
 const CACHE_KEY = 'redmine_issues_cache';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 
-const RedmineModel = () => {
+const RedmineModel = (apiKeysFile) => {
   const [nearDueIssues, setNearDueIssues] = useState([]);
   const [filteredIssues, setFilteredIssues] = useState([]);
   const [projectData, setProjectData] = useState({});
@@ -38,11 +38,17 @@ const RedmineModel = () => {
   const [showAllCharts, setShowAllCharts] = useState(true);
 
   const processIssues = (issues, apiKeys) => {
-    // Thêm URL cho mỗi issue dựa trên project và apiKeys
+    if (!Array.isArray(issues)) {
+      console.error('processIssues: issues is not an array', issues);
+      setNearDueIssues([]);
+      setFilteredIssues([]);
+      return;
+    }
+
     const issuesWithUrl = issues.map(issue => {
       const projectName = issue.project.name;
       const apiKey = apiKeys.find(key => key.project === projectName);
-      const redmineUrl = apiKey ? `${apiKey.url}/issues/${issue.id}` : '#'; // Mặc định là '#' nếu không tìm thấy
+      const redmineUrl = apiKey ? `${apiKey.url}/issues/${issue.id}` : '#';
       return { ...issue, redmineUrl };
     });
 
@@ -96,32 +102,13 @@ const RedmineModel = () => {
     setProjectFjnErrorData({ labels: projects, datasets });
   };
 
-  const loadApiKeysFromXML = async () => {
-    try {
-      const response = await fetch('/apiKeys.xml');
-      const xmlText = await response.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
-      const accounts = xmlDoc.getElementsByTagName('account');
-      const keys = Array.from(accounts).map(account => ({
-        project: account.getElementsByTagName('project')[0].textContent,
-        key: account.getElementsByTagName('key')[0].textContent,
-        url: account.getElementsByTagName('url')[0].textContent,
-      }));
-      return keys;
-    } catch (error) {
-      console.error('Error loading apiKeys.xml:', error);
-      return [];
-    }
-  };
-
   const fetchIssues = async (keys) => {
     setLoading(true);
     let allIssues = [];
     try {
       for (const { key, url } of keys) {
-        const proxyUrl = 'https://redmine-proxy.onrender.com/redmine-api'; // URL proxy Render của bạn
-        const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc`, {
+        const proxyUrl = 'https://redmine-proxy.onrender.com/redmine-api'; // Thay bằng URL proxy Render của bạn
+        const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc&assigned_to_id=me`, {
           headers: {
             'X-Redmine-API-Key': key,
             'X-Target-URL': url,
@@ -145,24 +132,45 @@ const RedmineModel = () => {
 
   useEffect(() => {
     const initialize = async () => {
-      const keys = await loadApiKeysFromXML();
-      setApiKeys(keys);
-      const cachedData = localStorage.getItem(CACHE_KEY);
-      const cachedTime = localStorage.getItem(`${CACHE_KEY}_time`);
-      const now = new Date().getTime();
-
-      if (cachedData && cachedTime && (now - cachedTime < CACHE_EXPIRY)) {
-        processIssues(JSON.parse(cachedData), keys);
-      } else if (keys.length > 0) {
-        await fetchIssues(keys);
+      if (!apiKeysFile) {
+        setLoading(false);
+        return; // Chưa chọn file, không làm gì
       }
-      setLoading(false);
+
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const xmlText = e.target.result;
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+          const accounts = xmlDoc.getElementsByTagName('account');
+          const keys = Array.from(accounts).map(account => ({
+            project: account.getElementsByTagName('project')[0].textContent,
+            key: account.getElementsByTagName('key')[0].textContent,
+            url: account.getElementsByTagName('url')[0].textContent,
+          }));
+          setApiKeys(keys);
+
+          const cachedData = localStorage.getItem(CACHE_KEY);
+          const cachedTime = localStorage.getItem(`${CACHE_KEY}_time`);
+          const now = new Date().getTime();
+
+          if (cachedData && cachedTime && (now - cachedTime < CACHE_EXPIRY)) {
+            processIssues(JSON.parse(cachedData), keys);
+          } else if (keys.length > 0) {
+            fetchIssues(keys);
+          }
+          setLoading(false);
+        };
+        reader.readAsText(apiKeysFile); // Đọc file XML tại client
+      } catch (error) {
+        console.error('Error reading apiKeys.xml:', error);
+        setApiKeys([]);
+        setLoading(false);
+      }
     };
-    initialize().catch(error => {
-      console.error('Initialization error:', error);
-      setLoading(false);
-    });
-  }, []);
+    initialize();
+  }, [apiKeysFile]); // Chạy lại khi file thay đổi
 
   return {
     nearDueIssues,
