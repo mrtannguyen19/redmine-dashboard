@@ -11,10 +11,10 @@ import IssueTable from './views/IssueTable';
 import ChartToggle from './views/ChartToggle';
 
 function App() {
+  const [apiKeysFile, setApiKeysFile] = useState(null);
   const [startDate, setStartDate] = useState(''); // State cho ngày bắt đầu
   const [endDate, setEndDate] = useState('');     // State cho ngày kết thúc
   const model = RedmineModel(apiKeysFile, startDate, endDate); // Truyền thêm startDate, endDate
-  const [apiKeysFile, setApiKeysFile] = useState(null); // State để lưu file
   const controller = RedmineController(model);
 
   const handleFileChange = (event) => {
