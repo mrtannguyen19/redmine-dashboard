@@ -11,8 +11,10 @@ import IssueTable from './views/IssueTable';
 import ChartToggle from './views/ChartToggle';
 
 function App() {
+  const [startDate, setStartDate] = useState(''); // State cho ngày bắt đầu
+  const [endDate, setEndDate] = useState('');     // State cho ngày kết thúc
+  const model = RedmineModel(apiKeysFile, startDate, endDate); // Truyền thêm startDate, endDate
   const [apiKeysFile, setApiKeysFile] = useState(null); // State để lưu file
-  const model = RedmineModel(apiKeysFile); // Truyền file vào RedmineModel
   const controller = RedmineController(model);
 
   const handleFileChange = (event) => {
@@ -40,6 +42,22 @@ function App() {
             Đã chọn file: {apiKeysFile.name}
           </Typography>
         )}
+      </Box>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+        <TextField
+          label="Ngày bắt đầu"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Ngày kết thúc"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
       </Box>
       <Typography variant="h6" gutterBottom sx={{ color: '#555' }}>
         Thống Kê (Tổng: {model.nearDueIssues.length} issues)

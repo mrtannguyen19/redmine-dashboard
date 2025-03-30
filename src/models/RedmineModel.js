@@ -5,7 +5,7 @@ import { getCustomFieldValue } from '../utils/helpers';
 const CACHE_KEY = 'redmine_issues_cache';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 
-const RedmineModel = (apiKeysFile) => {
+const RedmineModel = (apiKeysFile, startDate, endDate) => {
   const [nearDueIssues, setNearDueIssues] = useState([]);
   const [filteredIssues, setFilteredIssues] = useState([]);
   const [projectData, setProjectData] = useState({ labels: [], datasets: [] });
@@ -48,18 +48,28 @@ const RedmineModel = (apiKeysFile) => {
       setProjectFjnErrorData({ labels: [], datasets: [] });
       return;
     }
-  
-    const issuesWithUrl = issues.map(issue => {
+
+    // Lọc issue theo startDate và endDate
+    let filteredByDate = issues;
+    if (startDate || endDate) {
+      filteredByDate = issues.filter(issue => {
+        const createdOn = new Date(issue.created_on);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        return (!start || createdOn >= start) && (!end || createdOn <= end);
+      });
+    }
+
+    const issuesWithUrl = filteredByDate.map(issue => {
       const projectName = issue.project?.name || 'Unknown';
       const apiKey = apiKeys.find(key => key.project === projectName) || {};
       const redmineUrl = apiKey.url ? `${apiKey.url}/issues/${issue.id}` : '#';
       return { ...issue, redmineUrl };
     });
-  
+
     setNearDueIssues(issuesWithUrl);
     setFilteredIssues(issuesWithUrl);
-  
-    // Project Data
+
     const projectCount = issuesWithUrl.reduce((acc, issue) => {
       acc[issue.project.name] = (acc[issue.project.name] || 0) + 1;
       return acc;
@@ -68,8 +78,7 @@ const RedmineModel = (apiKeysFile) => {
       labels: Object.keys(projectCount),
       datasets: [{ label: 'プロジェクトごとの課題数', data: Object.values(projectCount), backgroundColor: '#36A2EB', borderColor: '#36A2EB', borderWidth: 1 }],
     });
-  
-    // Due Date Data
+
     const responseDueDates = issuesWithUrl.map((issue) => getCustomFieldValue(issue.custom_fields, '回答納期')).filter(date => date !== 'N/A');
     const dueDateCount = responseDueDates.reduce((acc, date) => {
       acc[date] = (acc[date] || 0) + 1;
@@ -81,8 +90,7 @@ const RedmineModel = (apiKeysFile) => {
       labels: sortedDueDates.map(([date]) => date),
       datasets: [{ label: '回答納期ごとの課題数', data: sortedDueDates.map(([, count]) => count), backgroundColor: '#FF6384', borderColor: '#FF6384', borderWidth: 1 }],
     });
-  
-    // Priority Data
+
     const priorityCount = issuesWithUrl.reduce((acc, issue) => {
       acc[issue.priority?.name || 'Unknown'] = (acc[issue.priority?.name || 'Unknown'] || 0) + 1;
       return acc;
@@ -91,8 +99,7 @@ const RedmineModel = (apiKeysFile) => {
       labels: Object.keys(priorityCount),
       datasets: [{ data: Object.values(priorityCount), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50'] }],
     });
-  
-    // Project FJN Error Data
+
     const projectFjnErrorCount = {};
     issuesWithUrl.forEach((issue) => {
       const project = issue.project?.name || 'Unknown';
@@ -115,7 +122,7 @@ const RedmineModel = (apiKeysFile) => {
     let allIssues = [];
     try {
       for (const { key, url } of keys) {
-        const proxyUrl = 'https://redmine-proxy.onrender.com/redmine-api'; // Thay bằng URL proxy Render của bạn
+        const proxyUrl = 'https://redmine-dashboard-proxy.onrender.com/redmine-api';
         const response = await axios.get(`${proxyUrl}/issues.json?limit=200&sort=created_on:desc&assigned_to_id=me`, {
           headers: {
             'X-Redmine-API-Key': key,
@@ -142,7 +149,7 @@ const RedmineModel = (apiKeysFile) => {
     const initialize = async () => {
       if (!apiKeysFile) {
         setLoading(false);
-        return; // Chưa chọn file, không làm gì
+        return;
       }
 
       try {
@@ -170,7 +177,7 @@ const RedmineModel = (apiKeysFile) => {
           }
           setLoading(false);
         };
-        reader.readAsText(apiKeysFile); // Đọc file XML tại client
+        reader.readAsText(apiKeysFile);
       } catch (error) {
         console.error('Error reading apiKeys.xml:', error);
         setApiKeys([]);
@@ -178,7 +185,7 @@ const RedmineModel = (apiKeysFile) => {
       }
     };
     initialize();
-  }, [apiKeysFile]); // Chạy lại khi file thay đổi
+  }, [apiKeysFile, startDate, endDate]); // Thêm startDate, endDate vào dependency
 
   return {
     nearDueIssues,
