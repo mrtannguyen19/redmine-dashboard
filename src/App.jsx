@@ -11,6 +11,7 @@ const AUTO_FETCH_INTERVAL_MS = 1000 * 60 * 5; // 5 phút
 function App() {
   const [issues, setIssues] = useState([]);
   const [filteredIssues, setFilteredIssues] = useState([]);
+  const [filteredIssuesTable, setFilteredIssuesTable] = useState([]);
 
   const loadData = async () => {
     const localData = getIssuesFromStorage();
@@ -18,6 +19,7 @@ function App() {
       console.log("Load from localStorage");
       setIssues(localData);
       setFilteredIssues(localData);
+      setFilteredIssuesTable(localData);
     } else {
       console.log("Fetching from Electron API...");
       const allIssues = [];
@@ -25,11 +27,12 @@ function App() {
         const projectIssues = await fetchIssuesFromElectron(project);
         allIssues.push(...projectIssues.map(issue => ({
           ...issue,
-          projectName: project.name // thêm tên project vào mỗi issue
+          projectName: project.name // Thêm tên project vào mỗi issue
         })));
       }
       setIssues(allIssues);
       setFilteredIssues(allIssues);
+      setFilteredIssuesTable(allIssues);
       localStorage.setItem("issues", JSON.stringify(allIssues));
     }
   };
@@ -41,8 +44,19 @@ function App() {
       loadData();
     }, AUTO_FETCH_INTERVAL_MS);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval); // Dọn dẹp interval khi component unmount
   }, []);
+
+  const handleProjectClick = (projectName) => {
+    // Step 1: Clear bảng trước
+    setFilteredIssuesTable([]);
+  
+    // Step 2: Sau đó load lại dữ liệu lọc
+    setTimeout(() => {
+      const filtered = filteredIssues.filter(issue => issue.project?.name === projectName);
+      setFilteredIssuesTable(filtered);
+    }, 100); // Delay nhẹ 100ms cho đẹp
+  };
 
   const handleFilter = (filterConditions) => {
     const filtered = issues.filter((issue) => {
@@ -72,7 +86,7 @@ function App() {
         {/* Vùng 2 - Biểu đồ */}
         <Box>
           <Typography variant="h6">Biểu đồ thống kê</Typography>
-          <ChartPanel data={filteredIssues} />
+          <ChartPanel data={filteredIssues} onProjectClick={handleProjectClick} />
         </Box>
 
         <Divider sx={{ my: 2 }} />
@@ -80,7 +94,7 @@ function App() {
         {/* Vùng 3 - Danh sách issue */}
         <Box>
           <Typography variant="h6">Danh sách Issue</Typography>
-          <IssueTable rows={filteredIssues} />
+          <IssueTable rows={filteredIssuesTable} />
         </Box>
       </Box>
     </Container>

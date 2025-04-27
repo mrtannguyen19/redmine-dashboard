@@ -1,0 +1,29 @@
+/* src/components/IssueTable.css */
+.revo-grid {
+  --rg-color: #000000 !important; /* Text color: black */
+  --rg-background: #ffffff !important; /* Background: white */
+  --rg-header-background: #f5f5f5 !important; /* Header background: light gray */
+  --rg-header-color: #000000 !important; /* Header text: black */
+  --rg-border-color: #e0e0e0 !important; /* Border: light gray */
+  --rg-cell-padding: 8px !important; /* Cell padding */
+  --rg-font-family: 'Roboto', sans-serif !important; /* Material UI font */
+  --rg-font-size: 14px !important; /* Font size */
+}
+
+.revo-grid .rgHeaderCell {
+  font-weight: 500 !important; /* Bold headers */
+}
+
+.revo-grid .rgRow {
+  border-bottom: 1px solid #e0e0e0 !important; /* Row borders */
+}
+
+.revo-grid .rgCell {
+  color: #000000 !important; /* Ensure cell text is black */
+  background-color: #ffffff !important; /* Ensure cell background is white */
+}
+
+.revo-grid .rgPagination {
+  padding: 8px !important; /* Pagination padding */
+  background-color: #f5f5f5 !important; /* Pagination background */
+}
