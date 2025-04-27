@@ -80,7 +80,7 @@ function App() {
         {/* Vùng 3 - Danh sách issue */}
         <Box>
           <Typography variant="h6">Danh sách Issue</Typography>
-          <IssueTable data={filteredIssues} />
+          <IssueTable rows={filteredIssues} />
         </Box>
       </Box>
     </Container>

@@ -13,7 +13,7 @@ function createWindow() {
     }
   });
 
-  win.loadFile(path.join(__dirname, "../public/index.html")); 
+  win.loadFile(path.join(__dirname, "../build/index.html")); 
 }
 
 ipcMain.handle('fetch-issues', async (event, project) => {
