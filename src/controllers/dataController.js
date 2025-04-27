@@ -1,24 +1,17 @@
-import axios from 'axios';
+// src/controllers/dataController.js
 
-const LOCAL_STORAGE_KEY = 'issues';
-
-export const fetchIssuesFromAPI = async (projectKey, apiUrl) => {
+export const fetchIssuesFromElectron = async (project) => {
   try {
-    const response = await axios.get(`${apiUrl}/issues.json`, {
-      headers: {
-        'X-Redmine-API-Key': projectKey
-      }
-    });
-    const issues = response.data.issues;
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(issues));
+    const issues = await window.electronAPI.fetchIssues(project);
+    console.log(`Fetched ${issues.length} issues from project ${project.name}`);
     return issues;
-  } catch (err) {
-    console.error("API fetch error:", err);
-    return null;
+  } catch (error) {
+    console.error(`Error fetching issues for project ${project.name}:`, error);
+    return [];
   }
 };
 
 export const getIssuesFromStorage = () => {
-  const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+  const data = localStorage.getItem('issues');
   return data ? JSON.parse(data) : null;
 };

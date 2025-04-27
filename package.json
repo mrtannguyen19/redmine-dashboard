@@ -1,11 +1,13 @@
 {
   "name": "redmine-dashboard",
   "version": "0.1.0",
+  "homepage": "./",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^7.0.2",
+    "@mui/x-data-grid": "^8.1.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -22,7 +24,9 @@
   },
   "main": "electron/main.js",
   "scripts": {
-    "start": "react-scripts start",
+    "start": "npm run build && npm run electron",
+    "react-start": "react-scripts start",
+    "build": "react-scripts build",
     "electron": "electron ."
   },
   "eslintConfig": {
