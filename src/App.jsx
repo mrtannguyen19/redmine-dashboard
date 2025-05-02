@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Box, Container, Typography, Divider } from "@mui/material";
+import { Box, Container, Typography, Divider, Button } from "@mui/material";
+import axios from "axios";
+import fs from "fs";
+import path from "path";
 import { fetchIssuesFromElectron, getIssuesFromStorage } from "./controllers/dataController";
 import ChartPanel from "./components/ChartPanel";
 import IssueTable from "./components/IssueTable";
@@ -15,7 +18,7 @@ function App() {
 
   const loadData = async () => {
     const localData = getIssuesFromStorage();
-    if (localData && localData.length > 0) {
+    if (localData && localData.length > 0 && 0>1) {
       console.log("Load from localStorage");
       setIssues(localData);
       setFilteredIssues(localData);
@@ -27,7 +30,7 @@ function App() {
         const projectIssues = await fetchIssuesFromElectron(project);
         allIssues.push(...projectIssues.map(issue => ({
           ...issue,
-          projectName: project.name // Thêm tên project vào mỗi issue
+          projectName: issue.project?.name  // Thêm tên project vào mỗi issue
         })));
       }
       setIssues(allIssues);
@@ -68,9 +71,72 @@ function App() {
     setFilteredIssues(filtered);
   };
 
+  const handleGetProjectIds = async () => {
+    const updatedProjects = [];
+
+    for (const project of projectsData.projects) {
+      try {
+        const res = await axios.get(`${project.url}/projects.json?limit=1000`, {
+          headers: {
+            "X-Redmine-API-Key": project.key
+          }
+        });
+
+        const matched = res.data.projects.find(p => p.name.trim() === project.name.trim());
+        if (matched) {
+          updatedProjects.push({ ...project, id: matched.id });
+        } else {
+          console.warn(`Không tìm thấy project "${project.name}"`);
+          updatedProjects.push(project);
+        }
+      } catch (err) {
+        console.error(`Lỗi khi get project_id cho "${project.name}":`, err.message);
+        updatedProjects.push(project);
+      }
+    }
+
+    const filePath = path.join(__dirname, "projects.json");
+    fs.writeFileSync(filePath, JSON.stringify({ projects: updatedProjects }, null, 2), "utf-8");
+    alert("Đã cập nhật project_id vào projects.json");
+  };
+
+  const handleFetchIssues = async () => {
+    const allIssues = [];
+
+    for (const project of projectsData.projects) {
+      if (!project.id) continue;
+
+      try {
+        const response = await axios.get(`${project.url}/issues.json?limit=100&project_id=${project.id}`, {
+          headers: {
+            "X-Redmine-API-Key": project.key
+          }
+        });
+
+        const issues = response.data.issues.map(issue => ({
+          ...issue,
+          projectName: issue.project?.name
+        }));
+
+        allIssues.push(...issues);
+      } catch (error) {
+        console.error(`Lỗi khi fetch issue cho ${project.name}:`, error.message);
+      }
+    }
+
+    setIssues(allIssues);
+    setFilteredIssues(allIssues);
+    setFilteredIssuesTable(allIssues);
+    localStorage.setItem("issues", JSON.stringify(allIssues));
+  };
+
   return (
     <Container maxWidth="xl">
       <Box py={2}>
+        <Box display="flex" gap={2} mb={2}>
+          <Button variant="contained" onClick={handleGetProjectIds}>Get Project IDs</Button>
+          <Button variant="outlined" onClick={handleFetchIssues}>Fetch Issues</Button>
+        </Box>
         <Typography variant="h4" gutterBottom>
           Redmine Dashboard
         </Typography>
