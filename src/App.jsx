@@ -27,7 +27,7 @@ function App() {
         const projectIssues = await fetchIssuesFromElectron(project);
         allIssues.push(...projectIssues.map(issue => ({
           ...issue,
-          projectName: issue.project?.name  // Thêm tên project vào mỗi issue
+          url: project?.url  // Thêm tên project vào mỗi issue
         })));
       }
       setIssues(allIssues);
@@ -47,15 +47,28 @@ function App() {
     return () => clearInterval(interval); // Dọn dẹp interval khi component unmount
   }, []);
 
-  const handleProjectClick = (projectName) => {
-    // Step 1: Clear bảng trước
+  const handleBarClick = (value, type) => {
     setFilteredIssuesTable([]);
-  
-    // Step 2: Sau đó load lại dữ liệu lọc
+
     setTimeout(() => {
-      const filtered = filteredIssues.filter(issue => issue.project?.name === projectName);
+      let filtered = [];
+      console.log(`Click on ${type} chart: ${value}`);
+      if (type === 'project') {
+        filtered = filteredIssues.filter(issue => issue.project?.name === value);
+      } else if (type === '回答納期') {
+        if (value === 'N/A') {
+          filtered = filteredIssues.filter(issue =>
+            !issue.custom_fields?.find(field => field.name === '回答納期' && field.value)
+          );
+        } else {
+          filtered = filteredIssues.filter(issue =>
+            issue.custom_fields?.find(field => field.name === '回答納期' && field.value === value)
+          );
+        }
+      }
+
       setFilteredIssuesTable(filtered);
-    }, 100); // Delay nhẹ 100ms cho đẹp
+    }, 100);
   };
 
   const handleFilter = (filterConditions) => {
@@ -86,7 +99,7 @@ function App() {
         {/* Vùng 2 - Biểu đồ */}
         <Box>
           <Typography variant="h6">Biểu đồ thống kê</Typography>
-          <ChartPanel data={filteredIssues} onProjectClick={handleProjectClick} />
+          <ChartPanel data={filteredIssues} onBarClick={handleBarClick} />
         </Box>
 
         <Divider sx={{ my: 2 }} />

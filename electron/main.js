@@ -44,7 +44,7 @@ ipcMain.handle('fetch-issues', async (event, project) => {
   try {
       const matchedProject = await findProjectByName(project);
       
-      const response = await axios.get(`${project.url}/issues.json?limit=100&project_id=${matchedProject.id}`, {
+      const response = await axios.get(`${project.url}/issues.json?limit=100&project_id=${matchedProject.id}&status_id=*&include=attachments`, {
       headers: {
         "X-Redmine-API-Key": project.key
       }
