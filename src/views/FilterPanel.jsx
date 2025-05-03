@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { Box, TextField, Button, Grid } from "@mui/material";
-import { FormGroup, FormControlLabel, Checkbox } from "@mui/material";
+import React, { useState } from 'react';
+import { Box, TextField, Button, Grid, FormGroup, FormControlLabel, Checkbox, CircularProgress } from '@mui/material';
+import { useRedmine } from './App';
 
-const FilterPanel = ({ onFilter }) => {
+const FilterPanel = () => {
+  const { isLoading, handleApplyFilter } = useRedmine();
   const [filterConditions, setFilterConditions] = useState({
     status: [],
-    createdFrom: "",
-    createdTo: "",
-    keyword: "",
+    createdFrom: '',
+    createdTo: '',
+    keyword: '',
   });
 
   const handleStatusChange = (event) => {
@@ -28,7 +29,7 @@ const FilterPanel = ({ onFilter }) => {
   };
 
   const handleApply = () => {
-    onFilter(filterConditions);
+    handleApplyFilter(filterConditions);
   };
 
   return (
@@ -36,23 +37,33 @@ const FilterPanel = ({ onFilter }) => {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <FormGroup row>
-          {[
-            "新規", "調査依頼", "調査中", "調査済", "修正依頼",
-            "修正中", "再修正依頼", "検証依頼", "検証中",
-            "検証済", "適用依頼", "完了"
-          ].map((s) => (
-            <FormControlLabel
-              key={s}
-              control={
-                <Checkbox
-                  checked={filterConditions.status.includes(s)}
-                  onChange={handleStatusChange}
-                  name={s}
-                />
-              }
-              label={s}
-            />
-          ))}
+            {[
+              '新規',
+              '調査依頼',
+              '調査中',
+              '調査済',
+              '修正依頼',
+              '修正中',
+              '再修正依頼',
+              '検証依頼',
+              '検証中',
+              '検証済',
+              '適用依頼',
+              '完了',
+            ].map((s) => (
+              <FormControlLabel
+                key={s}
+                control={
+                  <Checkbox
+                    checked={filterConditions.status.includes(s)}
+                    onChange={handleStatusChange}
+                    name={s}
+                    disabled={isLoading}
+                  />
+                }
+                label={s}
+              />
+            ))}
           </FormGroup>
         </Grid>
         <Grid item xs={6}>
@@ -64,6 +75,7 @@ const FilterPanel = ({ onFilter }) => {
             InputLabelProps={{ shrink: true }}
             value={filterConditions.createdFrom}
             onChange={handleChange}
+            disabled={isLoading}
           />
         </Grid>
         <Grid item xs={6}>
@@ -75,6 +87,7 @@ const FilterPanel = ({ onFilter }) => {
             InputLabelProps={{ shrink: true }}
             value={filterConditions.createdTo}
             onChange={handleChange}
+            disabled={isLoading}
           />
         </Grid>
         <Grid item xs={4}>
@@ -84,11 +97,18 @@ const FilterPanel = ({ onFilter }) => {
             name="keyword"
             value={filterConditions.keyword}
             onChange={handleChange}
+            disabled={isLoading}
           />
         </Grid>
         <Grid item xs={4}>
-          <Button variant="contained" fullWidth onClick={handleApply}>
-            Áp dụng
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleApply}
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={20} /> : null}
+          >
+            {isLoading ? 'Đang tải...' : 'Áp dụng'}
           </Button>
         </Grid>
       </Grid>

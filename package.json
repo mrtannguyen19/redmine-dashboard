@@ -24,7 +24,7 @@
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
-  "main": "electron/main.js",
+  "main": "./src/main.js",
   "scripts": {
     "start": "npm run build && npm run electron",
     "react-start": "react-scripts start",
@@ -50,6 +50,6 @@
     ]
   },
   "devDependencies": {
-    "electron": "^35.2.1"
+    "electron": "^36.1.0"
   }
 }
