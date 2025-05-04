@@ -19,17 +19,14 @@ function App() {
   const controller = useMemo(() => new RedmineController(setIssues, setLoading), []);
 
   useEffect(() => {
-    console.log('useEffect initialize called');
     async function initialize() {
       try {
         const localData = await window.electronAPI.getIssuesFromStorage();
-        if (localData && localData.length > 0) {
-          console.log('Loaded issues from storage:', localData.length);
+        if (localData && localData.length > 0 && 0>1) {
           setIssues(localData);
           setFilteredIssues(localData);
           setFilteredIssuesTable(localData);
         } else {
-          console.log('No local data, fetching from API');
           await controller.loadData();
         }
       } catch (error) {
@@ -45,24 +42,22 @@ function App() {
     // return () => clearInterval(interval);
   }, []); // Loại bỏ dependency [controller]
 
-  // useEffect(() => {
-  //   console.log('useEffect issues updated, issues length:', issues.length);
-  //   // Chỉ cập nhật nếu issues thực sự thay đổi
-  //   if (filteredIssues !== issues) {
-  //     setFilteredIssues(issues);
-  //   }
-  //   if (filteredIssuesTable !== issues) {
-  //     setFilteredIssuesTable(issues);
-  //   }
-  // }, [issues, filteredIssues, filteredIssuesTable]);
+  useEffect(() => {
+    // Chỉ cập nhật nếu issues thực sự thay đổi
+    if (filteredIssues !== issues) {
+      setFilteredIssues(issues);
+    }
+    if (filteredIssuesTable !== issues) {
+      setFilteredIssuesTable(issues);
+    }
+  //}, [issues, filteredIssues, filteredIssuesTable]);
+}, [issues]);
 
   const handleApplyFilter = (conditions) => {
-    console.log('Applying filter with conditions:', conditions);
     controller.handleApplyFilter(conditions);
   };
 
   const handleBarClick = (value, type) => {
-    console.log('App handleBarClick:', { value, type });
     controller.handleBarClick(value, type, filteredIssues, setFilteredIssuesTable);
   };
 
@@ -70,7 +65,7 @@ function App() {
     <RedmineContext.Provider value={{ issues, filteredIssues, filteredIssuesTable, isLoading, handleApplyFilter, handleBarClick }}>
       <Container maxWidth="xl">
         <Box py={2}>
-          <Typography variant="h4" gutterBottom>
+          <Typography variant="h4" gutterBottom align="center">
             Redmine Dashboard
           </Typography>
           <Box>

@@ -12,12 +12,9 @@ class RedmineModel {
   async findProjectByName(projectName) {
     try {
       const url = `${this.baseUrl}/projects.json?limit=1000`;
-      console.log('Fetching projects with URL:', url);
-      console.log('Using API Key:', this.apiKey);
       const response = await axios.get(url, {
         headers: { 'X-Redmine-API-Key': this.apiKey },
       });
-      console.log('Projects response:', response.data);
       const matched = response.data.projects.find((p) => p.name.trim() === projectName.trim());
       if (!matched) {
         console.warn(`Không tìm thấy project với tên "${projectName}"`);
@@ -30,17 +27,45 @@ class RedmineModel {
     }
   }
 
-  async fetchIssues(projectName) {
+  async fetchIssues(projectName, assignedToId = null) {
     try {
       const matchedProject = await this.findProjectByName(projectName);
       if (!matchedProject) return [];
-      const url = `${this.baseUrl}/issues.json?limit=100&project_id=${matchedProject.id}&status_id=*&include=attachments`;
-      console.log('Fetching issues with URL:', url);
-      const response = await axios.get(url, {
-        headers: { 'X-Redmine-API-Key': this.apiKey },
-      });
-      console.log('Issues response:', response.data);
-      return response.data.issues || [];
+  
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const createdAfter = sixMonthsAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+      let offset = 0;
+      const limit = 100;
+      let allIssues = [];
+      let fetchedCount = 0;
+  
+      do {
+        const params = new URLSearchParams();
+        params.append('limit', limit.toString());
+        params.append('offset', offset.toString());
+        params.append('project_id', matchedProject.id.toString());
+        params.append('status_id', '*');
+        params.append('include', 'attachments');
+        params.append('created_on', `>=${createdAfter}`); // Encode '>' as '%3E'
+        if (assignedToId !== null) {
+          params.append('assigned_to_id', assignedToId.toString());
+        }
+  
+        const url = `${this.baseUrl}/issues.json?${params.toString()}`;
+        const response = await axios.get(url, {
+          headers: { 'X-Redmine-API-Key': this.apiKey },
+        });
+  
+        const issues = response.data.issues || [];
+        console.log(`GET issues InModel project ${projectName}: ${issues.length}`);
+        allIssues = allIssues.concat(issues);
+        fetchedCount = issues.length;
+        offset += limit;
+      } while (fetchedCount === limit);
+  
+      return allIssues;
     } catch (error) {
       console.error('Lỗi khi fetch issues:', error.message, error.stack);
       throw error;

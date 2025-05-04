@@ -27,16 +27,15 @@ const ChartPanel = () => {
 
   const dueDateCount = {};
   filteredIssues.forEach((issue) => {
-    if (!issue.status.is_closed) { // Chỉ tính issue chưa đóng
+    //if (!issue.status.is_closed) { // Chỉ tính issue chưa đóng
       const dueDate = issue.custom_fields?.find((field) => field.name === '回答納期')?.value || 'N/A';
       dueDateCount[dueDate] = (dueDateCount[dueDate] || 0) + 1;
-    }
+    //}
   });
 
   // Lấy ngày hiện tại
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Đặt về đầu ngày để so sánh chính xác
-  console.log('System date:', today.toISOString().split('T')[0]);
 
   // Lọc các ngày hợp lệ (ngày >= today)
   const validDueDates = Object.keys(dueDateCount).filter(
@@ -68,8 +67,6 @@ const ChartPanel = () => {
     finalDueDates = sortedDueDates.slice(0, 7); // Chỉ lấy 7 ngày đầu tiên
   }
 
-  console.log('Final due dates for chart:', finalDueDates);
-
   const dueDateChartData = {
     labels: finalDueDates,
     datasets: [
@@ -99,7 +96,6 @@ const ChartPanel = () => {
     if (elements.length > 0) {
       const clickedIndex = elements[0].index;
       const clickedLabel = chartData.labels[clickedIndex];
-      console.log('Clicked project bar:', { label: clickedLabel, type: 'project' });
       handleBarClick(clickedLabel, 'project');
     }
   };
@@ -111,7 +107,6 @@ const ChartPanel = () => {
     if (elements.length > 0) {
       const clickedIndex = elements[0].index;
       const clickedLabel = dueDateChartData.labels[clickedIndex];
-      console.log('Clicked due date bar:', { label: clickedLabel, type: '回答納期' });
       handleBarClick(clickedLabel, '回答納期');
     }
   };

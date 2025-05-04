@@ -28,6 +28,7 @@ ipcMain.handle('fetch-issues', async (event, project) => {
   const model = new RedmineModel(project.key, project.url);
   try {
     const issues = await model.fetchIssues(project.name);
+    console.log(`GET issues ipcMain for project ${project.name}: ${issues.length}`);
     return issues;
   } catch (error) {
     console.error('IPC fetch-issues error:', error.message);
