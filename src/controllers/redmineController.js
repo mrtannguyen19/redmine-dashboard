@@ -4,15 +4,14 @@ class RedmineController {
     this.setLoading = setLoading;
   }
 
-  async loadData(filterConditions = null) {
+  async loadData(filterConditions = {}) {
     this.setLoading(true);
     const projectsData = require('../projects.json').projects;
-
+  
     const allIssues = [];
     for (const project of projectsData) {
       try {
-        const projectIssues = await window.electronAPI.fetchIssues(project);
-        console.log(`GET issues Controller for project ${project.name}: ${projectIssues.lenght}`);
+        const projectIssues = await window.electronAPI.fetchIssues(project, filterConditions);
         allIssues.push(
           ...projectIssues.map((issue) => ({
             ...issue,
@@ -24,25 +23,14 @@ class RedmineController {
         console.error(`Error fetching issues for project ${project.name}:`, error.message);
       }
     }
-
+  
     try {
       await window.electronAPI.saveIssuesToStorage(allIssues);
     } catch (error) {
       console.error('Error saving issues to storage:', error.message);
     }
-
-    let filteredIssues = allIssues;
-    // if (filterConditions) {
-    //   filteredIssues = allIssues.filter((issue) => {
-    //     if (filterConditions.status.length > 0 && !filterConditions.status.includes(issue.status?.name)) return false;
-    //     if (filterConditions.keyword && !issue.subject?.includes(filterConditions.keyword)) return false;
-    //     if (filterConditions.createdFrom && new Date(issue.created_on) < new Date(filterConditions.createdFrom)) return false;
-    //     if (filterConditions.createdTo && new Date(issue.created_on) > new Date(filterConditions.createdTo)) return false;
-    //     return true;
-    //   });
-    // }
-
-    this.setIssues(filteredIssues);
+  
+    this.setIssues(allIssues);
     this.setLoading(false);
   }
 

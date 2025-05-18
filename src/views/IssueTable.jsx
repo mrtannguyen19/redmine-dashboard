@@ -22,8 +22,6 @@ const IssueTable = () => {
   const [dialogIssue, setDialogIssue] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
 
-  console.log('IssueTable render, filteredIssuesTable:', filteredIssuesTable.length);
-
   const handleRowSelection = useCallback(
     (selectionModel) => {
       const selected = selectionModel.map((id) => filteredIssuesTable[id - 1]);

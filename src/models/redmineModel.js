@@ -2,6 +2,7 @@ const axios = require('axios');
 const { app } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const subMonths = require('date-fns/subMonths');
 
 class RedmineModel {
   constructor(apiKey, baseUrl) {
@@ -27,30 +28,73 @@ class RedmineModel {
     }
   }
 
-  async fetchIssues(projectName, assignedToId = null) {
+  async fetchIssues(projectName, filterConditions = {}) {
     try {
+      // Find project by name
       const matchedProject = await this.findProjectByName(projectName);
-      if (!matchedProject) return [];
+      if (!matchedProject) {
+        console.warn(`Project "${projectName}" not found.`);
+        return [];
+      }
   
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      const createdAfter = sixMonthsAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+      // Calculate default date range: last 12 months from now
+      const now = new Date();
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(now.getMonth() - 12);
+  
+      // Use filterConditions if provided, otherwise default to 12-month range
+      const createdFrom = filterConditions.createdFrom || twelveMonthsAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+      const createdTo = filterConditions.createdTo || now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const statusFilter = filterConditions.status || []; // Array of status names
+      const assignedTo = filterConditions.assignedTo || ''; // Name of assigned user
   
       let offset = 0;
       const limit = 100;
       let allIssues = [];
-      let fetchedCount = 0;
   
-      do {
+      // Map status names to status IDs (if needed)
+       let statusIds = [];
+      // if (statusFilter.length > 0) {
+      //   // Fetch available statuses from Redmine API
+      //   const statusUrl = `${this.baseUrl}/issue_statuses.json`;
+      //   const statusResponse = await axios.get(statusUrl, {
+      //     headers: { 'X-Redmine-API-Key': this.apiKey },
+      //   });
+      //   statusIds = statusResponse.data.issue_statuses
+      //     .filter((s) => statusFilter.includes(s.name))
+      //     .map((s) => s.id);
+      // }
+  
+      // Fetch user ID for assignedTo (if provided)
+       let assignedToId = '';
+      // if (assignedTo) {
+      //   const userUrl = `${this.baseUrl}/users.json?name=${encodeURIComponent(assignedTo)}`;
+      //   const userResponse = await axios.get(userUrl, {
+      //     headers: { 'X-Redmine-API-Key': this.apiKey },
+      //   });
+      //   const matchedUser = userResponse.data.users.find(
+      //     (u) => u.firstname + ' ' + u.lastname === assignedTo.trim()
+      //   );
+      //   assignedToId = matchedUser ? matchedUser.id : '';
+      // }
+  
+      // Paginate through issues
+      while (true) {
         const params = new URLSearchParams();
         params.append('limit', limit.toString());
         params.append('offset', offset.toString());
         params.append('project_id', matchedProject.id.toString());
-        params.append('status_id', '*');
+        //params.append('status_id', statusIds.length > 0 ? statusIds.join('|') : '*');
         params.append('include', 'attachments');
-        params.append('created_on', `>=${createdAfter}`); // Encode '>' as '%3E'
-        if (assignedToId !== null) {
-          params.append('assigned_to_id', assignedToId.toString());
+  
+        // Add date range filter
+        if (createdFrom && createdTo) {
+          params.append('created_on', `><${createdFrom}|${createdTo}`);
+        }
+  
+        // Add assigned_to_id filter
+        if (assignedToId) {
+          params.append('assigned_to_id', assignedToId);
         }
   
         const url = `${this.baseUrl}/issues.json?${params.toString()}`;
@@ -58,16 +102,31 @@ class RedmineModel {
           headers: { 'X-Redmine-API-Key': this.apiKey },
         });
   
-        const issues = response.data.issues || [];
-        console.log(`GET issues InModel project ${projectName}: ${issues.length}`);
+        let issues = response.data.issues || [];
+  
         allIssues = allIssues.concat(issues);
-        fetchedCount = issues.length;
+  
+        // Break loop if fewer issues than limit are returned (end of pagination)
+        if (issues.length < limit) {
+          break;
+        }
+  
         offset += limit;
-      } while (fetchedCount === limit);
+      }
   
       return allIssues;
     } catch (error) {
-      console.error('Lỗi khi fetch issues:', error.message, error.stack);
+      // Enhanced error handling
+      if (error.response) {
+        console.error(
+          `Redmine API error: ${error.response.status} - ${error.response.statusText}`,
+          error.response.data
+        );
+      } else if (error.request) {
+        console.error('No response received from Redmine API:', error.request);
+      } else {
+        console.error('Error setting up Redmine API request:', error.message);
+      }
       throw error;
     }
   }
