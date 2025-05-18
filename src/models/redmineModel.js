@@ -2,7 +2,6 @@ const axios = require('axios');
 const { app } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const subMonths = require('date-fns/subMonths');
 
 class RedmineModel {
   constructor(apiKey, baseUrl) {

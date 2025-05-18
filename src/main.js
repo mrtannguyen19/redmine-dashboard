@@ -2,7 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const RedmineModel = require('./models/redmineModel');
-const ScheduleManager = require('./models/scheduleManager');
+const { ScheduleManager } = require('./models/scheduleManager');
+const ScheduleController = require('./controllers/ScheduleController');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -57,12 +58,12 @@ ipcMain.handle('select-excel-file', async () => {
 });
 
 ipcMain.handle('import-schedule', async (event, filePath) => {
-  const manager = new ScheduleManager('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
+  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
-    const data = await manager.importFromExcel(filePath);
+    const data = await controller.importFromExcel(filePath);
     return data;
   } catch (error) {
     console.error('IPC import-schedule error:', error.message);
@@ -103,9 +104,9 @@ ipcMain.handle('get-issues-from-storage', async () => {
 });
 
 ipcMain.handle('fetch-schedule-issues', async (event, prgid, phaseName) => {
-  const manager = new ScheduleManager('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
+  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
   try {
-    return await manager.fetchTrackingIssues(prgid, phaseName);
+    return await controller.fetchTrackingIssues(prgid, phaseName);
   } catch (error) {
     console.error('IPC fetch-schedule-issues error:', error.message);
     return [];
@@ -113,9 +114,9 @@ ipcMain.handle('fetch-schedule-issues', async (event, prgid, phaseName) => {
 });
 
 ipcMain.handle('get-schedules', async () => {
-  const manager = new ScheduleManager('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
+  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
   try {
-    return manager.getFromStorage();
+    return controller.getFromStorage();
   } catch (error) {
     console.error('IPC get-schedules error:', error.message);
     return [];

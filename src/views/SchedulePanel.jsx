@@ -242,7 +242,6 @@ const SchedulePanel = ({ onBack }) => {
                 sortable: true,
                 filter: true,
                 resizable: true,
-                flex: 1,
               }}
               animateRows={true}
             />
