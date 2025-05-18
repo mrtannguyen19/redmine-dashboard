@@ -50,17 +50,17 @@ class ScheduleController {
   createPhase(phaseName, phaseData) {
     return new Phase({
       phaseName,
-      deliveryDate: phaseData?.delivery_date || '',
-      baselineEffort: phaseData?.baseline_effort || 0,
-      plannedStartDate: phaseData?.planned_start_date || '',
-      plannedEndDate: phaseData?.planned_end_date || '',
-      actualStartDate: phaseData?.actual_start_date || '',
-      actualEndDate: phaseData?.actual_end_date || '',
+      deliveryDate: phaseData?.deliveryDate || '',
+      baselineEffort: phaseData?.baselineEffort || 0,
+      plannedStartDate: phaseData?.plannedStartDate || '',
+      plannedEndDate: phaseData?.plannedEndDate || '',
+      actualStartDate: phaseData?.actualStartDate || '',
+      actualEndDate: phaseData?.actualEndDate || '',
       assignee: phaseData?.assignee || '',
       progress: phaseData?.progress || 0,
-      actualEffort: phaseData?.actual_effort || 0,
-      designPages: phaseData?.design_pages || 0,
-      testCases: phaseData?.test_cases || 0,
+      actualEffort: phaseData?.actualEffort || 0,
+      designPages: phaseData?.designPages || 0,
+      testCases: phaseData?.testCases || 0,
       defects: phaseData?.defects || 0,
       notes: phaseData?.notes || '',
     });
@@ -123,38 +123,7 @@ class ScheduleController {
       const storagePath = path.join(app.getPath('userData'), 'schedules.json');
       if (fs.existsSync(storagePath)) {
         const data = fs.readFileSync(storagePath, 'utf8');
-        return JSON.parse(data).map(
-          (p) =>
-            new Program({
-              prgid: p.prgid,
-              prgname: p.prgname,
-              frame: p.frame,
-              phases: p.phases.map(
-                (ph) =>
-                  new Phase({
-                    ...ph,
-                    trackingIssues: ph.trackingIssues.map(
-                      (ti) =>
-                        new TrackingIssue({
-                          ...ti,
-                          attachments: ti.attachments.map(
-                            (att) => new Attachment(att)
-                          ),
-                        })
-                    ),
-                  })
-              ),
-              trackingIssues: p.trackingIssues.map(
-                (ti) =>
-                  new TrackingIssue({
-                    ...ti,
-                    attachments: ti.attachments.map(
-                      (att) => new Attachment(att)
-                    ),
-                  })
-              ),
-            })
-        );
+        return JSON.parse(data).map(p => Program.fromJSON(p));
       }
       return [];
     } catch (error) {
