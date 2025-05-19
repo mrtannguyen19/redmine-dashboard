@@ -21,7 +21,7 @@ class ScheduleController {
   async importFromExcel(filePath) {
     try {
       const data = await importExcelFile(filePath);
-      return data;
+      return this.parseExcelData(data);
     } catch (error) {
       console.error('ScheduleController importFromExcel error:', error.message);
       throw error;
@@ -41,6 +41,9 @@ class ScheduleController {
           this.createPhase('Coding', row.coding),
           this.createPhase('Testing', row.testing),
         ],
+        bugCount: 0,
+        qaCount: 0,
+        trackingIssues: [],
       });
       programs.push(program);
     });
@@ -66,59 +69,98 @@ class ScheduleController {
     });
   }
 
-  async fetchTrackingIssues(prgid, phaseName = null) {
+  async fetchTrackingIssues(projectId, phaseName = null) {
     try {
       const params = new URLSearchParams();
-      params.append('project_id', prgid);
+      params.append('project_id', projectId);
       if (phaseName) {
         params.append('cf_phase', phaseName);
       }
+      params.append('status_id', '*');
+      params.append('limit', 100);
 
-      const url = `${this.trackingBaseUrl}/issues.json?${params.toString()}`;
-      const response = await axios.get(url, {
-        headers: { 'X-Redmine-API-Key': this.trackingApiKey },
+      let allIssues = [];
+      let offset = 0;
+      let totalCount = 0;
+
+      do {
+        params.set('offset', offset);
+        const url = `${this.trackingBaseUrl}/issues.json?${params.toString()}`;
+        const response = await axios.get(url, {
+          headers: { 'X-Redmine-API-Key': this.trackingApiKey },
+        });
+
+        allIssues = [...allIssues, ...response.data.issues];
+        totalCount = response.data.total_count;
+        offset += response.data.limit;
+      } while (offset < totalCount);
+
+      return allIssues.map((issue) => {
+        const moduleField = issue.custom_fields?.find(field => field.name === '発生PGID')?.value || '';
+        return new TrackingIssue({
+          issueId: issue.id,
+          subject: issue.subject,
+          status: issue.status.name,
+          priority: issue.priority.name,
+          assignee: issue.assigned_to?.name || '',
+          createdOn: issue.created_on,
+          updatedOn: issue.updated_on,
+          trackerName: issue.tracker.name,
+          module: moduleField,
+          description: issue.description || '',
+          attachments: issue.attachments?.map(
+            (att) =>
+              new Attachment({
+                id: att.id,
+                filename: att.filename,
+                contentUrl: att.content_url,
+                createdOn: att.created_on,
+              })
+          ) || [],
+          projectId: issue.project.id,
+          projectName: issue.project.name,
+        });
       });
-
-      return response.data.issues.map(
-        (issue) =>
-          new TrackingIssue({
-            issueId: issue.id,
-            subject: issue.subject,
-            status: issue.status.name,
-            priority: issue.priority.name,
-            assignee: issue.assigned_to?.name,
-            createdOn: issue.created_on,
-            updatedOn: issue.updated_on,
-            description: issue.description,
-            attachments: issue.attachments.map(
-              (att) =>
-                new Attachment({
-                  id: att.id,
-                  filename: att.filename,
-                  contentUrl: att.content_url,
-                  createdOn: att.created_on,
-                })
-            ),
-            projectId: issue.project.id,
-            projectName: issue.project.name,
-          })
-      );
     } catch (error) {
       console.error('Error fetching Tracking issues:', error.message);
       return [];
     }
   }
 
-  saveToStorage(programs) {
+  async updateSchedulesWithIssues(schedules, project) {
     try {
-      const storagePath = path.join(app.getPath('userData'), 'schedules.json');
-      fs.writeFileSync(storagePath, JSON.stringify(programs));
+      const issues = await this.fetchTrackingIssues(project.ProjectID);
+      if (!issues || issues.length === 0) {
+        return schedules;
+      }
+      for (const schedule of schedules) {
+        schedule.trackingIssues = issues.filter(issue => issue.module === schedule.prgid);
+        schedule.bugCount = schedule.trackingIssues.filter(
+          issue => issue.trackerName === 'バグ'
+        ).length;
+        schedule.qaCount = schedule.trackingIssues.filter(
+          issue => issue.trackerName === 'Q&A'
+        ).length;
+      }
+      return schedules;
     } catch (error) {
-      console.error('Error saving schedules to storage:', error.message);
+      console.error('Error updating schedules with issues:', error.message);
+      return schedules;
     }
   }
 
-  getFromStorage() {
+  async saveToStorage(programs) {
+    try {
+      const storagePath = path.join(app.getPath('userData'), 'schedules.json');
+      fs.writeFileSync(storagePath, JSON.stringify(programs, null, 2));
+      return true;
+    } catch (error) {
+      console.error('Error saving schedules to storage:', error.message);
+      throw error;
+    }
+  }
+
+  async getFromStorage() {
     try {
       const storagePath = path.join(app.getPath('userData'), 'schedules.json');
       if (fs.existsSync(storagePath)) {
@@ -128,7 +170,7 @@ class ScheduleController {
       return [];
     } catch (error) {
       console.error('Error reading schedules from storage:', error.message);
-      return [];
+      throw error;
     }
   }
 }

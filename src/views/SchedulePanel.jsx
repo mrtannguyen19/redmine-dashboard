@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Button, Box, Container, Typography, Snackbar, Alert, FormControl, InputLabel, Select, MenuItem, Grid,
   Accordion, AccordionSummary, AccordionDetails, Card, CardContent, Skeleton, ThemeProvider, createTheme
@@ -73,12 +73,16 @@ const SchedulePanel = ({ onBack }) => {
   const [filteredSchedules, setFilteredSchedules] = useState([]);
   const [activeFilter, setActiveFilter] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const [isSchedulesLoaded, setIsSchedulesLoaded] = useState(false);
+  const currentProjectIdRef = useRef('');
 
   const chartRefs = {
     design: useRef(),
     coding: useRef(),
   };
 
+  // Load projects when component mounts
   useEffect(() => {
     const fetchProjects = async () => {
       setIsLoading(true);
@@ -98,39 +102,115 @@ const SchedulePanel = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-    const loadSchedule = async () => {
-      setIsLoading(true);
-      try {
-        const project = projects.find(p => p.ProjectID === selectedProjectId);
-        if (project && project.SchedulePath && project.ScheduleFileName) {
-          const filePath = `${project.SchedulePath}/${project.ScheduleFileName}`;
-          const data = await window.electronAPI.importSchedule(filePath);
-          setSchedules(data);
-          setSelectedFile(filePath);
-          setSnackbar({
-            open: true,
-            message: `Imported ${data.length} items from ${filePath.split('/').pop()}`,
-            severity: 'success',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load schedule:', err.message);
+  let isCancelled = false; // Flag để hủy nếu projectId đổi
+
+  const loadSchedule = async () => {
+    setIsLoading(true);
+    setIsSchedulesLoaded(false);
+    try {
+      if (selectedProjectId) {
+        currentProjectIdRef.current = selectedProjectId;
+        const result = await window.electronAPI.loadSchedule(selectedProjectId);
+        if (isCancelled) return; // Bỏ qua nếu projectId đã đổi
+
+        // Gộp các setState để giảm re-renders
+        setSchedules(result.schedules);
+        setSelectedFile(result.filePath);
+        setIsSchedulesLoaded(true);
         setSnackbar({
           open: true,
-          message: `Failed to load schedule: ${err.message}`,
+          message: `Imported ${result.schedules.length} items from ${result.filePath.split('/').pop()}`,
+          severity: 'success',
+        });
+      }
+    } catch (err) {
+      if (isCancelled) return;
+      console.error('Failed to load schedule:', err.message);
+      setSnackbar({
+        open: true,
+        message: `Failed to load schedule: ${err.message || 'Unknown error'}`,
+        severity: 'error',
+      });
+    } finally {
+      if (!isCancelled) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  loadSchedule();
+
+  return () => {
+    isCancelled = true; // Cleanup: hủy nếu useEffect chạy lại
+  };
+}, [selectedProjectId]);
+
+  // Fetch tracking issues only after schedules are loaded
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchIssues = async () => {
+      if (!isSchedulesLoaded || schedules.length === 0 || !selectedProjectId) return;
+      if (currentProjectIdRef.current !== selectedProjectId) return;
+
+      setIsLoadingIssues(true);
+      try {
+        const updatedSchedules = await window.electronAPI.updateScheduleIssues(selectedProjectId, schedules);
+        if (isCancelled || currentProjectIdRef.current !== selectedProjectId) return;
+
+        setSchedules(updatedSchedules);
+        if (isCancelled) return;
+        setSnackbar({
+          open: true,
+          message: `Updated ${updatedSchedules.length} schedules with ${updatedSchedules.reduce((sum, s) => sum + s.bugCount + s.qaCount, 0)} issues`,
+          severity: 'success',
+        });
+      } catch (err) {
+        if (isCancelled) return;
+        console.error('Failed to update schedules with issues:', err.message);
+        setSnackbar({
+          open: true,
+          message: `Failed to update issues: ${err.message || 'Unknown error'}`,
           severity: 'error',
         });
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) setIsLoadingIssues(false);
       }
     };
-    if (selectedProjectId) loadSchedule();
-  }, [selectedProjectId, projects]);
+
+    fetchIssues();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isSchedulesLoaded, selectedProjectId]);
 
   const columns = [
     { field: 'id', headerName: 'ID', width: 90 },
     { field: 'prgid', headerName: 'Program ID', width: 120 },
     { field: 'prgname', headerName: 'Program Name', width: 180 },
+    { 
+      field: 'bugCount', 
+      headerName: 'Bugs', 
+      width: 100,
+      cellStyle: params => ({
+        backgroundColor: params.value > 0 ? '#ff6b6b' : '#ffffff',
+        color: params.value > 0 ? '#fff' : '#000',
+        borderRadius: '4px',
+        textAlign: 'center',
+      }),
+    },
+    { 
+      field: 'qaCount', 
+      headerName: 'Q&A', 
+      width: 100,
+      cellStyle: params => ({
+        backgroundColor: params.value > 0 ? '#4dabf7' : '#ffffff',
+        color: params.value > 0 ? '#fff' : '#000',
+        borderRadius: '4px',
+        textAlign: 'center',
+      }),
+    },
     { field: 'designDeliveryDate', headerName: 'Design Delivery', width: 150 },
     { field: 'design_assignee', headerName: 'Design Assignee', width: 150 },
     {
@@ -142,18 +222,18 @@ const SchedulePanel = ({ onBack }) => {
         if (isNaN(value) || value === 0) return {};
         let backgroundColor = '';
         if (value < 50) {
-          backgroundColor = '#ffca28'; // Amber
+          backgroundColor = '#ffca28';
         } else if (value >= 50 && value <= 99) {
           const ratio = (value - 50) / 50;
           backgroundColor = `hsl(120, 100%, ${50 - ratio * 20}%)`;
         } else {
-          backgroundColor = '#4caf50'; // Green
+          backgroundColor = '#4caf50';
         }
         return { backgroundColor, color: '#fff', borderRadius: '4px', textAlign: 'center' };
       },
       valueFormatter: params => {
         const value = Number(params.value);
-        return isNaN(value) ? '' : `${(value).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 0 })}`;
+        return isNaN(value) ? '' : `${(value * 100).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 0 })}`;
       },
     },
     { field: 'review_assignee', headerName: 'Review Assignee', width: 150 },
@@ -229,28 +309,34 @@ const SchedulePanel = ({ onBack }) => {
         return isNaN(value) ? '' : `${(value * 100).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 0 })}`;
       },
     },
+    
   ];
 
-  const rows = schedules.map((schedule, index) => ({
-    id: index,
-    prgid: schedule.prgid,
-    prgname: schedule.prgname,
-    designDeliveryDate: schedule.design?.deliveryDate ? new Date(schedule.design.deliveryDate).toISOString().split('T')[0] : '',
-    design_assignee: schedule.design?.assignee || '',
-    design_progress: schedule.design?.progress || 0,
-    review_assignee: schedule.review?.assignee || '',
-    review_progress: schedule.review?.progress || 0,
-    codingDeliveryDate: schedule.coding?.deliveryDate ? new Date(schedule.coding.deliveryDate).toISOString().split('T')[0] : '',
-    coding_assignee: schedule.coding?.assignee || '',
-    coding_progress: schedule.coding?.progress || 0,
-    testing_assignee: schedule.testing?.assignee || '',
-    testing_progress: schedule.testing?.progress || 0,
-  }));
+  // Memoize rows to avoid recomputing on every render
+  const rows = useMemo(() => {
+    return schedules.map((schedule, index) => ({
+      id: index,
+      prgid: schedule.prgid,
+      prgname: schedule.prgname,
+      designDeliveryDate: schedule.phases.find(p => p.phaseName === 'Design')?.deliveryDate ? new Date(schedule.phases.find(p => p.phaseName === 'Design').deliveryDate).toISOString().split('T')[0] : '',
+      design_assignee: schedule.phases.find(p => p.phaseName === 'Design')?.assignee || '',
+      design_progress: schedule.phases.find(p => p.phaseName === 'Design')?.progress || 0,
+      review_assignee: schedule.phases.find(p => p.phaseName === 'Review')?.assignee || '',
+      review_progress: schedule.phases.find(p => p.phaseName === 'Review')?.progress || 0,
+      codingDeliveryDate: schedule.phases.find(p => p.phaseName === 'Coding')?.deliveryDate ? new Date(schedule.phases.find(p => p.phaseName === 'Coding').deliveryDate).toISOString().split('T')[0] : '',
+      coding_assignee: schedule.phases.find(p => p.phaseName === 'Coding')?.assignee || '',
+      coding_progress: schedule.phases.find(p => p.phaseName === 'Coding')?.progress || 0,
+      testing_assignee: schedule.phases.find(p => p.phaseName === 'Testing')?.assignee || '',
+      testing_progress: schedule.phases.find(p => p.phaseName === 'Testing')?.progress || 0,
+      bugCount: schedule.bugCount || 0,
+      qaCount: schedule.qaCount || 0,
+    }));
+  }, [schedules]);
 
   const getDeliveryChartData = (phase) => {
     const dateMap = new Map();
     schedules.forEach(s => {
-      const dateStr = s[phase]?.deliveryDate;
+      const dateStr = s.phases.find(p => p.phaseName === phase)?.deliveryDate;
       if (dateStr) {
         const d = new Date(dateStr).toLocaleDateString('en-CA');
         dateMap.set(d, (dateMap.get(d) || 0) + 1);
@@ -265,9 +351,9 @@ const SchedulePanel = ({ onBack }) => {
       labels: sorted.map(([d]) => d),
       datasets: [
         {
-          label: `${phase.charAt(0).toUpperCase() + phase.slice(1)} Delivery Count`,
+          label: `${phase} Delivery Count`,
           data: sorted.map(([, count]) => count),
-          backgroundColor: theme.palette.primary.main + '80', // Semi-transparent
+          backgroundColor: theme.palette.primary.main + '80',
           borderColor: theme.palette.primary.main,
           borderWidth: 2,
           hoverBackgroundColor: theme.palette.primary.dark,
@@ -276,6 +362,10 @@ const SchedulePanel = ({ onBack }) => {
       ],
     };
   };
+
+  // Memoize chart data to avoid recomputing
+  const designChartData = useMemo(() => getDeliveryChartData('Design'), [schedules]);
+  const codingChartData = useMemo(() => getDeliveryChartData('Coding'), [schedules]);
 
   const chartOptions = {
     responsive: true,
@@ -290,16 +380,13 @@ const SchedulePanel = ({ onBack }) => {
     },
   };
 
-  const designChartData = getDeliveryChartData('design');
-  const codingChartData = getDeliveryChartData('coding');
-
   const handleBarClick = (elements, event, chartPhase) => {
     if (!elements.length) return;
     const index = elements[0].index;
-    const label = chartRefs[chartPhase].current?.data?.labels?.[index];
+    const label = chartRefs[chartPhase.toLowerCase()].current?.data?.labels?.[index];
     if (!label) return;
     const filtered = schedules.filter(s => {
-      const date = s[chartPhase]?.deliveryDate;
+      const date = s.phases.find(p => p.phaseName === chartPhase)?.deliveryDate;
       return date && new Date(date).toLocaleDateString('en-CA') === label;
     });
     setFilteredSchedules(filtered);
@@ -321,7 +408,6 @@ const SchedulePanel = ({ onBack }) => {
           </Button>
         </Box>
 
-        {/* Section 1: Project Selection */}
         <Card sx={{ mb: 3 }}>
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -361,7 +447,6 @@ const SchedulePanel = ({ onBack }) => {
           </Accordion>
         </Card>
 
-        {/* Section 2: Charts */}
         <Card sx={{ mb: 3 }}>
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -382,7 +467,7 @@ const SchedulePanel = ({ onBack }) => {
                         data={designChartData}
                         options={{
                           ...chartOptions,
-                          onClick: (evt, elements) => handleBarClick(elements, evt, 'design'),
+                          onClick: (evt, elements) => handleBarClick(elements, evt, 'Design'),
                         }}
                       />
                     </Box>
@@ -397,7 +482,7 @@ const SchedulePanel = ({ onBack }) => {
                         data={codingChartData}
                         options={{
                           ...chartOptions,
-                          onClick: (evt, elements) => handleBarClick(elements, evt, 'coding'),
+                          onClick: (evt, elements) => handleBarClick(elements, evt, 'Coding'),
                         }}
                       />
                     </Box>
@@ -431,11 +516,10 @@ const SchedulePanel = ({ onBack }) => {
           </Accordion>
         </Card>
 
-        {/* Section 3: Schedule Grid */}
         <Card>
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">Schedule Grid</Typography>
+              <Typography variant="h6">Schedule Grid {isLoadingIssues ? '(Currently counting the number of Bugs and Q&As in Tracking…)' : ''}</Typography>
             </AccordionSummary>
             <AccordionDetails>
               {isLoading ? (
@@ -447,16 +531,18 @@ const SchedulePanel = ({ onBack }) => {
                       id: index,
                       prgid: s.prgid,
                       prgname: s.prgname,
-                      designDeliveryDate: s.design?.deliveryDate ? new Date(s.design.deliveryDate).toISOString().split('T')[0] : '',
-                      design_assignee: s.design?.assignee || '',
-                      design_progress: s.design?.progress || 0,
-                      review_assignee: s.review?.assignee || '',
-                      review_progress: s.review?.progress || 0,
-                      codingDeliveryDate: s.coding?.deliveryDate ? new Date(s.coding.deliveryDate).toISOString().split('T')[0] : '',
-                      coding_assignee: s.coding?.assignee || '',
-                      coding_progress: s.coding?.progress || 0,
-                      testing_assignee: s.testing?.assignee || '',
-                      testing_progress: s.testing?.progress || 0,
+                      designDeliveryDate: s.phases.find(p => p.phaseName === 'Design')?.deliveryDate ? new Date(s.phases.find(p => p.phaseName === 'Design').deliveryDate).toISOString().split('T')[0] : '',
+                      design_assignee: s.phases.find(p => p.phaseName === 'Design')?.assignee || '',
+                      design_progress: s.phases.find(p => p.phaseName === 'Design')?.progress || 0,
+                      review_assignee: s.phases.find(p => p.phaseName === 'Review')?.assignee || '',
+                      review_progress: s.phases.find(p => p.phaseName === 'Review')?.progress || 0,
+                      codingDeliveryDate: s.phases.find(p => p.phaseName === 'Coding')?.deliveryDate ? new Date(s.phases.find(p => p.phaseName === 'Coding').deliveryDate).toISOString().split('T')[0] : '',
+                      coding_assignee: s.phases.find(p => p.phaseName === 'Coding')?.assignee || '',
+                      coding_progress: s.phases.find(p => p.phaseName === 'Coding')?.progress || 0,
+                      testing_assignee: s.phases.find(p => p.phaseName === 'Testing')?.assignee || '',
+                      testing_progress: s.phases.find(p => p.phaseName === 'Testing')?.progress || 0,
+                      bugCount: s.bugCount || 0,
+                      qaCount: s.qaCount || 0,
                     })) : rows}
                     columnDefs={columns}
                     pagination={true}
@@ -468,7 +554,6 @@ const SchedulePanel = ({ onBack }) => {
                       headerClass: 'ag-header-sticky',
                     }}
                     animateRows={true}
-                    // domLayout="autoHeight"
                     getRowStyle={() => ({ transition: 'all 0.3s ease' })}
                     accessibility={true}
                   />

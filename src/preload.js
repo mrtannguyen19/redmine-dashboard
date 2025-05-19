@@ -10,5 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSchedules: () => ipcRenderer.invoke('get-schedules'),
   getProjects: () => ipcRenderer.invoke('get-projects'),
   saveProjects: (projects) => ipcRenderer.invoke('save-projects', projects),
-  computeProjectPaths: (rootPath) => ipcRenderer.invoke('compute-project-paths', rootPath)
+  computeProjectPaths: (rootPath) => ipcRenderer.invoke('compute-project-paths', rootPath),
+  loadSchedule: (projectId) => ipcRenderer.invoke('load-schedule', projectId),
+  updateScheduleIssues: (projectId, schedules) => ipcRenderer.invoke('update-schedule-issues', projectId, schedules)
 });

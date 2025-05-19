@@ -2,7 +2,6 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const RedmineModel = require('./models/redmineModel');
-const { ScheduleManager } = require('./models/scheduleManager');
 const ScheduleController = require('./controllers/ScheduleController');
 
 function createWindow() {
@@ -28,6 +27,7 @@ function createWindow() {
   });
 
   win.loadFile(path.join(__dirname, '../build/index.html')).catch((err) => {
+    console.error('Error loading index.html:', err);
   });
 }
 
@@ -58,7 +58,7 @@ ipcMain.handle('select-excel-file', async () => {
 });
 
 ipcMain.handle('import-schedule', async (event, filePath) => {
-  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
+  const controller = new ScheduleController('', '', '', '');
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
@@ -68,6 +68,59 @@ ipcMain.handle('import-schedule', async (event, filePath) => {
   } catch (error) {
     console.error('IPC import-schedule error:', error.message);
     return [];
+  }
+});
+
+ipcMain.handle('load-schedule', async (event, projectId) => {
+  try {
+    const projectsPath = path.join(__dirname, 'projects.json');
+    const projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+    const project = projects.find(p => p.ProjectID === projectId);
+    if (!project) {
+      throw new Error(`Project not found: ${projectId}`);
+    }
+
+    const controller = new ScheduleController(
+      project.TrackingAPIKey,
+      project.TrackingURL,
+      project.TrackingAPIKey,
+      project.TrackingURL
+    );
+
+    if (!project.SchedulePath || !project.ScheduleFileName) {
+      throw new Error('Invalid project schedule path or filename');
+    }
+    const filePath = path.join(project.SchedulePath, project.ScheduleFileName);
+    const schedules = await controller.importFromExcel(filePath);
+    return { schedules, filePath };
+  } catch (error) {
+    console.error('IPC load-schedule error:', error.message);
+    throw error;
+  }
+});
+
+ipcMain.handle('update-schedule-issues', async (event, projectId, schedules) => {
+  try {
+    const projectsPath = path.join(__dirname, 'projects.json');
+    const projects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+    const project = projects.find(p => p.ProjectID === projectId);
+    if (!project) {
+      throw new Error(`Project not found: ${projectId}`);
+    }
+
+    const controller = new ScheduleController(
+      project.TrackingAPIKey,
+      project.TrackingURL,
+      project.TrackingAPIKey,
+      project.TrackingURL
+    );
+
+    const updatedSchedules = await controller.updateSchedulesWithIssues(schedules, project);
+    await controller.saveToStorage(updatedSchedules);
+    return updatedSchedules;
+  } catch (error) {
+    console.error('IPC update-schedule-issues error:', error.message);
+    throw error;
   }
 });
 
@@ -88,7 +141,7 @@ ipcMain.handle('save-issues-to-storage', async (event, issues) => {
     model.saveIssuesToStorage(issues);
     return true;
   } catch (error) {
-    console.error('IPC SAVE-issues-to-storage error:', error.message);
+    console.error('IPC save-issues-to-storage error:', error.message);
     return false;
   }
 });
@@ -104,7 +157,7 @@ ipcMain.handle('get-issues-from-storage', async () => {
 });
 
 ipcMain.handle('fetch-schedule-issues', async (event, prgid, phaseName) => {
-  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
+  const controller = new ScheduleController('', '', '', '');
   try {
     return await controller.fetchTrackingIssues(prgid, phaseName);
   } catch (error) {
@@ -114,9 +167,13 @@ ipcMain.handle('fetch-schedule-issues', async (event, prgid, phaseName) => {
 });
 
 ipcMain.handle('get-schedules', async () => {
-  const controller = new ScheduleController('YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL', 'YOUR_TRACKING_API_KEY', 'YOUR_TRACKING_BASE_URL');
   try {
-    return controller.getFromStorage();
+    const storagePath = path.join(app.getPath('userData'), 'schedules.json');
+    if (fs.existsSync(storagePath)) {
+      const data = fs.readFileSync(storagePath, 'utf8');
+      return JSON.parse(data);
+    }
+    return [];
   } catch (error) {
     console.error('IPC get-schedules error:', error.message);
     return [];
@@ -126,7 +183,7 @@ ipcMain.handle('get-schedules', async () => {
 ipcMain.handle('compute-project-paths', async (event, rootPath) => {
   try {
     if (!fs.existsSync(rootPath)) {
-      //throw new Error(`RootPath does not exist: ${rootPath}`);
+      // throw new Error(`RootPath does not exist: ${rootPath}`);
     }
     const designPath = path.join(rootPath, 'Design');
     const testingPath = path.join(rootPath, 'Testing');
@@ -184,9 +241,8 @@ ipcMain.handle('save-projects', async (event, projects) => {
     const updatedProjects = await Promise.all(projects.map(async (project) => {
       let computedPaths = {};
       if (project.RootPath) {
-        //computedPaths = await ipcMain.handle('compute-project-paths', null, project.RootPath);
+        // computedPaths = await ipcMain.handle('compute-project-paths', null, project.RootPath);
       }
-      // Define project with fields in the desired order
       return {
         ProjectID: project.ProjectID || '',
         RootPath: project.RootPath || '',
