@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Button, Box, Container, Typography, Snackbar, Alert, FormControl, InputLabel, Select, MenuItem, Grid,
-  Accordion, AccordionSummary, AccordionDetails, Card, CardContent, Skeleton, ThemeProvider, createTheme
+  Accordion, AccordionSummary, AccordionDetails, Card, CardContent, Skeleton, ThemeProvider, createTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions, Link
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
 import { Bar } from 'react-chartjs-2';
@@ -17,6 +18,8 @@ import {
   Legend,
 } from 'chart.js';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+// import 'ag-grid-community/styles/ag-grid.css';
+// import 'ag-grid-community/styles/ag-theme-quartz.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend);
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -76,6 +79,11 @@ const SchedulePanel = ({ onBack }) => {
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
   const [isSchedulesLoaded, setIsSchedulesLoaded] = useState(false);
   const currentProjectIdRef = useRef('');
+  const currentProjectURLRef = useRef('');
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogIssues, setDialogIssues] = useState([]);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogType, setDialogType] = useState(''); // 'bug' hoặc 'qa'
 
   const chartRefs = {
     design: useRef(),
@@ -102,50 +110,48 @@ const SchedulePanel = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-  let isCancelled = false; // Flag để hủy nếu projectId đổi
+    let isCancelled = false;
 
-  const loadSchedule = async () => {
-    setIsLoading(true);
-    setIsSchedulesLoaded(false);
-    try {
-      if (selectedProjectId) {
-        currentProjectIdRef.current = selectedProjectId;
-        const result = await window.electronAPI.loadSchedule(selectedProjectId);
-        if (isCancelled) return; // Bỏ qua nếu projectId đã đổi
-
-        // Gộp các setState để giảm re-renders
-        setSchedules(result.schedules);
-        setSelectedFile(result.filePath);
-        setIsSchedulesLoaded(true);
+    const loadSchedule = async () => {
+      setIsLoading(true);
+      setIsSchedulesLoaded(false);
+      try {
+        if (selectedProjectId) {
+          currentProjectIdRef.current = selectedProjectId;
+          currentProjectURLRef.current = projects.find(p => p.ProjectID === selectedProjectId)?.TrackingURL || '';
+          const result = await window.electronAPI.loadSchedule(selectedProjectId);
+          if (isCancelled) return;
+          setSchedules(result.schedules);
+          setSelectedFile(result.filePath);
+          setIsSchedulesLoaded(true);
+          setSnackbar({
+            open: true,
+            message: `Imported ${result.schedules.length} items from ${result.filePath.split('/').pop()}`,
+            severity: 'success',
+          });
+        }
+      } catch (err) {
+        if (isCancelled) return;
+        console.error('Failed to load schedule:', err.message);
         setSnackbar({
           open: true,
-          message: `Imported ${result.schedules.length} items from ${result.filePath.split('/').pop()}`,
-          severity: 'success',
+          message: `Failed to load schedule: ${err.message || 'Unknown error'}`,
+          severity: 'error',
         });
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
-    } catch (err) {
-      if (isCancelled) return;
-      console.error('Failed to load schedule:', err.message);
-      setSnackbar({
-        open: true,
-        message: `Failed to load schedule: ${err.message || 'Unknown error'}`,
-        severity: 'error',
-      });
-    } finally {
-      if (!isCancelled) {
-        setIsLoading(false);
-      }
-    }
-  };
+    };
 
-  loadSchedule();
+    loadSchedule();
 
-  return () => {
-    isCancelled = true; // Cleanup: hủy nếu useEffect chạy lại
-  };
-}, [selectedProjectId]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedProjectId]);
 
-  // Fetch tracking issues only after schedules are loaded
   useEffect(() => {
     let isCancelled = false;
 
@@ -185,31 +191,169 @@ const SchedulePanel = ({ onBack }) => {
     };
   }, [isSchedulesLoaded, selectedProjectId]);
 
+  // Định nghĩa cột cho dialog Bug
+  const bugColumns = [
+    { field: 'issueId', headerName: 'ID', width: 80, 
+      cellRenderer: (params) => {
+      const issueId = params.data.issueId;
+      const url = currentProjectURLRef.current ? `${currentProjectURLRef.current}/issues/${issueId}` : '';
+      return (
+        <a href={url} target="_blank">
+            {issueId}
+        </a>
+    );
+    },},
+    { field: 'status', headerName: 'Status', width: 80 },
+    { field: 'subject', headerName: 'Subject', width: 250,wrapText: true,autoHeight: true, },
+    { field: 'author', headerName: 'Author', width: 100 },
+    { field: 'assignee', headerName: 'Assigned To', width: 100 },
+    {
+      field: 'description',
+      headerName: 'Description',
+      width: 400, // Tăng chiều rộng để hiển thị tốt hơn
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+    },
+    {
+      field: 'fixMethod',
+      headerName: 'Fix Method',
+      width: 300,
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+      //valueGetter: params => params.data.customFields?.find(f => f.name === 'Fix Method')?.value || 'N/A',
+    },
+  ];
+
+  // Định nghĩa cột cho dialog Q&A
+  const qaColumns = [
+    { field: 'qaNo', headerName: 'Q&ANo.', width: 90 },
+    { field: 'status', headerName: 'Status', width: 90 },
+    { field: 'subject', headerName: 'Subject', width: 250, wrapText: true,autoHeight: true, },
+    { field: 'author', headerName: 'Author', width: 100 },
+    { field: 'assignee', headerName: 'Assigned To', width: 100 },
+    {
+      field: 'questionVN',
+      headerName: 'Question (VN)',
+      width: 400,
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+      //valueGetter: params => params.data.customFields?.find(f => f.name === 'Question (VN)')?.value || 'N/A',
+    },
+    {
+      field: 'questionJP',
+      headerName: 'Question (JP)',
+      width: 350,
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+      //valueGetter: params => params.data.customFields?.find(f => f.name === 'Question (JP)')?.value || 'N/A',
+    },
+    {
+      field: 'answerJP',
+      headerName: 'Answer (JP)',
+      width: 350,
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+      //valueGetter: params => params.data.customFields?.find(f => f.name === 'Answer (JP)')?.value || 'N/A',
+    },
+    {
+      field: 'answerVN',
+      headerName: 'Answer (VN)',
+      width: 350,
+      wrapText: true, // Cho phép text xuống dòng
+      autoHeight: true, // Tự động điều chỉnh chiều cao hàng
+      //valueGetter: params => params.data.customFields?.find(f => f.name === 'Answer (VN)')?.value || 'N/A',
+    },
+  ];
+
+  // Hàm xử lý double-click trên cell
+  const handleCellDoubleClicked = (params) => {
+    const { colDef, data } = params;
+    const schedule = schedules.find(s => s.prgid === data.prgid);
+    if (!schedule || !schedule.trackingIssues) {
+      console.warn('No schedule or trackingIssues found for prgid:', data.prgid);
+      return;
+    }
+
+    if (colDef.field === 'bugCount') {
+      const bugs = schedule.trackingIssues
+        .filter(issue => issue.trackerName === 'Bug')
+        .map(issue => ({
+          issueId: issue.issueId,
+          subject: issue.subject,
+          status: issue.status,
+          author: issue.author,
+          assignee: issue.assignee || '',
+          description: issue.description,
+          fixMethod: issue.fixMethod||'',
+        }));
+      setDialogIssues(bugs);
+      setDialogTitle(`Bugs for ${schedule.prgname} (${schedule.prgid})`);
+      setDialogType('bug');
+      setOpenDialog(true);
+    } else if (colDef.field === 'qaCount') {
+      const qas = schedule.trackingIssues
+        .filter(issue => issue.trackerName === 'Q&A')
+        .map(issue => ({
+          qaNo: issue.qaNo,
+          subject: issue.subject,
+          status: issue.status,
+          author: issue.author,
+          assignee: issue.assignee || '',
+          questionVN: issue.questionVN || '',
+          questionJP: issue.questionJP || '',
+          answerJP: issue.answerJP || '',
+          answerVN: issue.answerVN || '',
+        }));
+      setDialogIssues(qas);
+      setDialogTitle(`Q&A for ${schedule.prgname} (${schedule.prgid})`);
+      setDialogType('qa');
+      setOpenDialog(true);
+    }
+  };
+
   const columns = [
     { field: 'id', headerName: 'ID', width: 90 },
     { field: 'prgid', headerName: 'Program ID', width: 120 },
     { field: 'prgname', headerName: 'Program Name', width: 180 },
-    { 
-      field: 'bugCount', 
-      headerName: 'Bugs', 
+    {
+      field: 'bugCount',
+      headerName: 'Bugs',
       width: 100,
-      cellStyle: params => ({
-        backgroundColor: params.value > 0 ? '#ff6b6b' : '#ffffff',
-        color: params.value > 0 ? '#fff' : '#000',
-        borderRadius: '4px',
-        textAlign: 'center',
-      }),
+      valueGetter: (params) => {
+        const resolved = params.data.bugResolvedCount || 0;
+        const total = params.data.bugCount || 0;
+        return `${resolved} / ${total}`;
+      },
+      cellStyle: (params) => {
+        const resolved = params.data.bugResolvedCount || 0;
+        const total = params.data.bugCount || 0;
+        if (resolved === 0 && total === 0) {
+          return { backgroundColor: '#f5f5f5', color: '#9e9e9e' }; // màu xám nhạt nếu không có dữ liệu
+        } else if (resolved < total) {
+          return { backgroundColor: '#fdecea', color: '#b71c1c' }; // đỏ nhạt
+        }
+        return { backgroundColor: '#e6f4ea', color: '#1b5e20' }; // xanh nhạt
+      }
     },
-    { 
-      field: 'qaCount', 
-      headerName: 'Q&A', 
+    {
+      field: 'qaCount',
+      headerName: 'Q&A',
       width: 100,
-      cellStyle: params => ({
-        backgroundColor: params.value > 0 ? '#4dabf7' : '#ffffff',
-        color: params.value > 0 ? '#fff' : '#000',
-        borderRadius: '4px',
-        textAlign: 'center',
-      }),
+      valueGetter: (params) => {
+        const resolved = params.data.qaResolvedCount || 0;
+        const total = params.data.qaCount || 0;
+        return `${resolved} / ${total}`;
+      },
+      cellStyle: (params) => {
+        const resolved = params.data.qaResolvedCount || 0;
+        const total = params.data.qaCount || 0;
+        if (resolved === 0 && total === 0) {
+          return { backgroundColor: '#f5f5f5', color: '#9e9e9e' }; // màu xám nhạt nếu không có dữ liệu
+        } else if (resolved < total) {
+          return { backgroundColor: '#fdecea', color: '#b71c1c' }; // đỏ nhạt
+        }
+        return { backgroundColor: '#e6f4ea', color: '#1b5e20' }; // xanh nhạt
+      },
     },
     { field: 'designDeliveryDate', headerName: 'Design Delivery', width: 150 },
     { field: 'design_assignee', headerName: 'Design Assignee', width: 150 },
@@ -309,15 +453,18 @@ const SchedulePanel = ({ onBack }) => {
         return isNaN(value) ? '' : `${(value * 100).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 0 })}`;
       },
     },
-    
   ];
 
   // Memoize rows to avoid recomputing on every render
   const rows = useMemo(() => {
     return schedules.map((schedule, index) => ({
-      id: index,
+      id: index + 1,
       prgid: schedule.prgid,
       prgname: schedule.prgname,
+      bugCount: schedule.bugCount || 0,
+      qaCount: schedule.qaCount || 0,
+      qaResolvedCount: schedule.qaResolvedCount || 0,
+      bugResolvedCount: schedule.bugResolvedCount || 0,
       designDeliveryDate: schedule.phases.find(p => p.phaseName === 'Design')?.deliveryDate ? new Date(schedule.phases.find(p => p.phaseName === 'Design').deliveryDate).toISOString().split('T')[0] : '',
       design_assignee: schedule.phases.find(p => p.phaseName === 'Design')?.assignee || '',
       design_progress: schedule.phases.find(p => p.phaseName === 'Design')?.progress || 0,
@@ -328,8 +475,6 @@ const SchedulePanel = ({ onBack }) => {
       coding_progress: schedule.phases.find(p => p.phaseName === 'Coding')?.progress || 0,
       testing_assignee: schedule.phases.find(p => p.phaseName === 'Testing')?.assignee || '',
       testing_progress: schedule.phases.find(p => p.phaseName === 'Testing')?.progress || 0,
-      bugCount: schedule.bugCount || 0,
-      qaCount: schedule.qaCount || 0,
     }));
   }, [schedules]);
 
@@ -391,6 +536,14 @@ const SchedulePanel = ({ onBack }) => {
     });
     setFilteredSchedules(filtered);
     setActiveFilter({ phase: chartPhase, date: label });
+  };
+
+  // Đóng dialog
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setDialogIssues([]);
+    setDialogTitle('');
+    setDialogType('');
   };
 
   return (
@@ -531,6 +684,8 @@ const SchedulePanel = ({ onBack }) => {
                       id: index,
                       prgid: s.prgid,
                       prgname: s.prgname,
+                      bugCount: s.bugCount || 0,
+                      qaCount: s.qaCount || 0,
                       designDeliveryDate: s.phases.find(p => p.phaseName === 'Design')?.deliveryDate ? new Date(s.phases.find(p => p.phaseName === 'Design').deliveryDate).toISOString().split('T')[0] : '',
                       design_assignee: s.phases.find(p => p.phaseName === 'Design')?.assignee || '',
                       design_progress: s.phases.find(p => p.phaseName === 'Design')?.progress || 0,
@@ -541,8 +696,6 @@ const SchedulePanel = ({ onBack }) => {
                       coding_progress: s.phases.find(p => p.phaseName === 'Coding')?.progress || 0,
                       testing_assignee: s.phases.find(p => p.phaseName === 'Testing')?.assignee || '',
                       testing_progress: s.phases.find(p => p.phaseName === 'Testing')?.progress || 0,
-                      bugCount: s.bugCount || 0,
-                      qaCount: s.qaCount || 0,
                     })) : rows}
                     columnDefs={columns}
                     pagination={true}
@@ -550,12 +703,14 @@ const SchedulePanel = ({ onBack }) => {
                     defaultColDef={{
                       sortable: true,
                       filter: true,
+                      floatingFilter: true,
                       resizable: true,
-                      headerClass: 'ag-header-sticky',
+                      //sheaderClass: 'ag-header-sticky',
                     }}
                     animateRows={true}
                     getRowStyle={() => ({ transition: 'all 0.3s ease' })}
                     accessibility={true}
+                    onCellDoubleClicked={handleCellDoubleClicked}
                   />
                 </Box>
               ) : (
@@ -566,6 +721,43 @@ const SchedulePanel = ({ onBack }) => {
             </AccordionDetails>
           </Accordion>
         </Card>
+
+        {/* Dialog để hiển thị danh sách Bugs hoặc Q&A */}
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogContent>
+            {dialogIssues.length > 0 ? (
+              <Box sx={{ height: '600px', width: '100%' }} className="ag-theme-quartz">
+                <AgGridReact
+                  rowData={dialogIssues}
+                  columnDefs={dialogType === 'bug' ? bugColumns : qaColumns}
+                  defaultColDef={{
+                    sortable: true,
+                    filter: true,
+                    resizable: true,
+                  }}
+                  pagination={true}
+                  paginationPageSize={10}
+                  animateRows={true}
+                />
+              </Box>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                No issues available.
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog} color="primary" variant="contained">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Snackbar
           open={snackbar.open}

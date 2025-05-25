@@ -1,0 +1,465 @@
+{
+     "issues": [
+        {
+            "id": 78654,
+            "project": {
+                "id": 733,
+                "name": "PJ-UCD-202503-0019 (SC-BROCCOLI)"
+            },
+            "tracker": {
+                "id": 1,
+                "name": "Bug"
+            },
+            "status": {
+                "id": 1,
+                "name": "Resolved",
+                "is_closed": false
+            },
+            "priority": {
+                "id": 2,
+                "name": "Normal"
+            },
+            "author": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "assigned_to": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "subject": "Chưa clear trạng thái lỗi khi thay đổi trị",
+            "description": "1. Trường hợp input lỗi tại item 棚卸作業№, sau đó thay đổi item 機能選択 từ  \"１：棚卸№入力\" thành 　\"２：新規入力\" thì không thể input trị tại detail. File đính kèm sheet \"001\"\r\n\r\n2. Tại detail, input HINCD (là sản phẩm có quản lý LOT)  và enter tại item ロットNo. thì sẽ báo lỗi bắt buộc input. \r\n\r\nSau đó thay đổi HINCD từ sản phẩm có quàn lý LOT thành sản phẩm không có quản lý LOT thì item ロットNo. vẫn đang là trạng thái lỗi. File đính kèm sheet \"002",
+            "start_date": null,
+            "due_date": "2025-05-26",
+            "done_ratio": 0,
+            "is_private": false,
+            "estimated_hours": null,
+            "total_estimated_hours": null,
+            "spent_hours": 0.0,
+            "total_spent_hours": 0.0,
+ 
+            "custom_fields": [
+                {
+                    "id": 18,
+                    "name": "Bug Category",
+                    "value": ""
+                },
+                {
+                    "id": 14,
+                    "name": "Phase find bug",
+                    "value": "11"
+                },
+                {
+                    "id": 2,
+                    "name": "Module",
+                    "value": "SMKDLK1"
+                },
+                {
+                    "id": 10,
+                    "name": "Reason",
+                    "value": "Bug do source cũ"
+                },
+                {
+                    "id": 11,
+                    "name": "Fix Method",
+                    "value": "Chỉnh sửa tại UNTCD.U02,SELKB.F01"
+                },
+                {
+                    "id": 12,
+                    "name": "Bug Type",
+                    "value": "2"
+                },
+                {
+                    "id": 13,
+                    "name": "Detected by",
+                    "value": "3"
+                },
+                {
+                    "id": 9,
+                    "name": "Bug Weight",
+                    "value": "2"
+                },
+                {
+                    "id": 19,
+                    "name": "Source",
+                    "value": "32"
+                },
+                {
+                    "id": 27,
+                    "name": "This issue is not a Bug",
+                    "value": "0"
+                }
+            ],
+            "created_on": "2025-05-23T06:58:01Z",
+            "updated_on": "2025-05-23T06:58:01Z",
+            "closed_on": null
+ 
+        },
+        {
+            "id": 78653,
+            "project": {
+                "id": 733,
+                "name": "PJ-UCD-202503-0019 (SC-BROCCOLI)"
+            },
+            "tracker": {
+                "id": 1,
+                "name": "Bug"
+            },
+            "status": {
+                "id": 1,
+                "name": "Resolved",
+                "is_closed": false
+            },
+            "priority": {
+                "id": 2,
+                "name": "Normal"
+            },
+            "author": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "assigned_to": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "subject": "Chưa clear trạng thái lỗi khi thay đổi trị",
+            "description": "1. Trường hợp input lỗi tại item 棚卸作業№, sau đó thay đổi item 機能選択 từ  \"１：棚卸№入力\" thành 　\"２：新規入力\" thì không thể input trị tại detail. File đính kèm sheet \"001\"\r\n\r\n2. Tại detail, input HINCD (là sản phẩm có quản lý LOT)  và enter tại item ロットNo. thì sẽ báo lỗi bắt buộc input. \r\n\r\nSau đó thay đổi HINCD từ sản phẩm có quàn lý LOT thành sản phẩm không có quản lý LOT thì item ロットNo. vẫn đang là trạng thái lỗi. File đính kèm sheet \"002",
+            "start_date": null,
+            "due_date": "2025-05-26",
+            "done_ratio": 0,
+            "is_private": false,
+            "estimated_hours": null,
+            "total_estimated_hours": null,
+            "spent_hours": 0.0,
+            "total_spent_hours": 0.0,
+ 
+            "custom_fields": [
+                {
+                    "id": 18,
+                    "name": "Bug Category",
+                    "value": ""
+                },
+                {
+                    "id": 14,
+                    "name": "Phase find bug",
+                    "value": "11"
+                },
+                {
+                    "id": 2,
+                    "name": "Module",
+                    "value": "SMKDLK1"
+                },
+                {
+                    "id": 10,
+                    "name": "Reason",
+                    "value": "Bug do source cũ"
+                },
+                {
+                    "id": 11,
+                    "name": "Fix Method",
+                    "value": "Chỉnh sửa tại UNTCD.U02,SELKB.F01"
+                },
+                {
+                    "id": 12,
+                    "name": "Bug Type",
+                    "value": "2"
+                },
+                {
+                    "id": 13,
+                    "name": "Detected by",
+                    "value": "3"
+                },
+                {
+                    "id": 9,
+                    "name": "Bug Weight",
+                    "value": "2"
+                },
+                {
+                    "id": 19,
+                    "name": "Source",
+                    "value": "32"
+                },
+                {
+                    "id": 27,
+                    "name": "This issue is not a Bug",
+                    "value": "0"
+                }
+            ],
+            "created_on": "2025-05-23T06:58:01Z",
+            "updated_on": "2025-05-23T06:58:01Z",
+            "closed_on": null
+ 
+        },
+        {
+            "id": 78646,
+            "project": {
+                "id": 733,
+                "name": "PJ-UCD-202503-0019 (SC-BROCCOLI)"
+            },
+            "tracker": {
+                "id": 4,
+                "name": "Q&A"
+            },
+            "status": {
+                "id": 1,
+                "name": "New",
+                "is_closed": false
+            },
+            "priority": {
+                "id": 2,
+                "name": "Normal"
+            },
+            "author": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "assigned_to": {
+                "id": 25,
+                "name": "tan-nb"
+            },
+            "subject": "Confirm về lỗi PGT tại V10",
+            "description": null,
+            "start_date": null,
+            "due_date": "2025-05-26",
+            "done_ratio": 0,
+            "is_private": false,
+            "estimated_hours": null,
+            "total_estimated_hours": null,
+            "spent_hours": 0.0,
+            "total_spent_hours": 0.0,
+            "custom_fields": [
+                {
+                    "id": 8,
+                    "name": "Phase (create Q&A)",
+                    "value": "05 - Unit Testing"
+                },
+                {
+                    "id": 1,
+                    "name": "Q&A No.",
+                    "value": "57"
+                },
+                {
+                    "id": 2,
+                    "name": "Module",
+                    "value": "VKSFPF2"
+                },
+                {
+                    "id": 3,
+                    "name": "Question (VN)",
+                    "value": "2.Tại V10 thì đang phát sinh lỗi Khi PGT. Xin tham khảo file đính kèm.\r\n\r\nNguyên nhân: Tại Unit SOUNM.F03 đang sử dụng hàm Derived có khai báo tham số  De_Index để set trị cho item SOUNM. \r\n\r\nTuy nhiên, Item SOUCD, SOUNM đang là item HD nên phát sinh lỗi trên.\r\n\r\nVậy tại V10, tôi sẽ chỉnh sửa để PGT không bị lỗi.\r\n\r\nXin quý công ty confirm giúp, xin cảm ơn."
+                },
+ 
+                {
+                    "id": 4,
+                    "name": "Question (JP)",
+                    "value": "2.Câu hoi bang tieng nhat"
+                },
+                {
+                    "id": 6,
+                    "name": "Answer (JP)",
+                    "value": "2.Tra lời bằng tiếng Nhật"
+                },
+                {
+                    "id": 5,
+                    "name": "Answer (VN)",
+                    "value": "trả lời bằng tiếng Việt"
+                },
+                {
+                    "id": 7,
+                    "name": "Q&A Type",
+                    "value": "Confirmation"
+                },
+                {
+                    "id": 15,
+                    "name": "Q&A Result",
+                    "value": ""
+                }
+            ],
+            "created_on": "2025-05-23T06:49:58Z",
+            "updated_on": "2025-05-23T06:49:58Z",
+            "closed_on": null
+        },
+        {
+            "id": 78645,
+            "project": {
+                "id": 733,
+                "name": "PJ-UCD-202503-0019 (SC-BROCCOLI)"
+            },
+            "tracker": {
+                "id": 4,
+                "name": "Q&A"
+            },
+            "status": {
+                "id": 1,
+                "name": "New",
+                "is_closed": false
+            },
+            "priority": {
+                "id": 2,
+                "name": "Normal"
+            },
+            "author": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "assigned_to": {
+                "id": 25,
+                "name": "tan-nb"
+            },
+            "subject": "Confirm về lỗi PGT tại V10",
+            "description": null,
+            "start_date": null,
+            "due_date": "2025-05-26",
+            "done_ratio": 0,
+            "is_private": false,
+            "estimated_hours": null,
+            "total_estimated_hours": null,
+            "spent_hours": 0.0,
+            "total_spent_hours": 0.0,
+            "custom_fields": [
+                {
+                    "id": 8,
+                    "name": "Phase (create Q&A)",
+                    "value": "05 - Unit Testing"
+                },
+                {
+                    "id": 1,
+                    "name": "Q&A No.",
+                    "value": "56"
+                },
+                {
+                    "id": 2,
+                    "name": "Module",
+                    "value": "VKSFPF2"
+                },
+                {
+                    "id": 3,
+                    "name": "Question (VN)",
+                    "value": "Tại V10 thì đang phát sinh lỗi Khi PGT. Xin tham khảo file đính kèm.\r\n\r\nNguyên nhân: Tại Unit SOUNM.F03 đang sử dụng hàm Derived có khai báo tham số  De_Index để set trị cho item SOUNM. \r\n\r\nTuy nhiên, Item SOUCD, SOUNM đang là item HD nên phát sinh lỗi trên.\r\n\r\nVậy tại V10, tôi sẽ chỉnh sửa để PGT không bị lỗi.\r\n\r\nXin quý công ty confirm giúp, xin cảm ơn."
+                },
+ 
+                {
+                    "id": 4,
+                    "name": "Question (JP)",
+                    "value": "Câu hoi bang tieng nhat"
+                },
+                {
+                    "id": 6,
+                    "name": "Answer (JP)",
+                    "value": "Tra lời bằng tiếng Nhật"
+                },
+                {
+                    "id": 5,
+                    "name": "Answer (VN)",
+                    "value": "trả lời bằng tiếng Việt"
+                },
+                {
+                    "id": 7,
+                    "name": "Q&A Type",
+                    "value": "Confirmation"
+                },
+                {
+                    "id": 15,
+                    "name": "Q&A Result",
+                    "value": ""
+                }
+            ],
+            "created_on": "2025-05-23T06:49:58Z",
+            "updated_on": "2025-05-23T06:49:58Z",
+            "closed_on": null
+        }
+        ,
+        {
+            "id": 78647,
+            "project": {
+                "id": 733,
+                "name": "PJ-UCD-202503-0019 (SC-BROCCOLI)"
+            },
+            "tracker": {
+                "id": 4,
+                "name": "Q&A"
+            },
+            "status": {
+                "id": 1,
+                "name": "Resolved",
+                "is_closed": false
+            },
+            "priority": {
+                "id": 2,
+                "name": "Normal"
+            },
+            "author": {
+                "id": 59,
+                "name": "yen-ntp"
+            },
+            "assigned_to": {
+                "id": 25,
+                "name": "tan-nb"
+            },
+            "subject": "Confirm về lỗi PGT tại V10",
+            "description": null,
+            "start_date": null,
+            "due_date": "2025-05-26",
+            "done_ratio": 0,
+            "is_private": false,
+            "estimated_hours": null,
+            "total_estimated_hours": null,
+            "spent_hours": 0.0,
+            "total_spent_hours": 0.0,
+            "custom_fields": [
+                {
+                    "id": 8,
+                    "name": "Phase (create Q&A)",
+                    "value": "05 - Unit Testing"
+                },
+                {
+                    "id": 1,
+                    "name": "Q&A No.",
+                    "value": "58"
+                },
+                {
+                    "id": 2,
+                    "name": "Module",
+                    "value": "VKSFPF2"
+                },
+                {
+                    "id": 3,
+                    "name": "Question (VN)",
+                    "value": "57.Tại V10 thì đang phát sinh lỗi Khi PGT. Xin tham khảo file đính kèm.\r\n\r\nNguyên nhân: Tại Unit SOUNM.F03 đang sử dụng hàm Derived có khai báo tham số  De_Index để set trị cho item SOUNM. \r\n\r\nTuy nhiên, Item SOUCD, SOUNM đang là item HD nên phát sinh lỗi trên.\r\n\r\nVậy tại V10, tôi sẽ chỉnh sửa để PGT không bị lỗi.\r\n\r\nXin quý công ty confirm giúp, xin cảm ơn."
+                },
+ 
+                {
+                    "id": 4,
+                    "name": "Question (JP)",
+                    "value": "Câu hoi bang tieng nhat"
+                },
+                {
+                    "id": 6,
+                    "name": "Answer (JP)",
+                    "value": "Tra lời bằng tiếng Nhật"
+                },
+                {
+                    "id": 5,
+                    "name": "Answer (VN)",
+                    "value": "trả lời bằng tiếng Việt"
+                },
+                {
+                    "id": 7,
+                    "name": "Q&A Type",
+                    "value": "Confirmation"
+                },
+                {
+                    "id": 15,
+                    "name": "Q&A Result",
+                    "value": ""
+                }
+            ],
+            "created_on": "2025-05-23T06:49:58Z",
+            "updated_on": "2025-05-23T06:49:58Z",
+            "closed_on": null
+        }
+    ],
+    "total_count": 2,
+    "offset": 0,
+    "limit": 100
+}

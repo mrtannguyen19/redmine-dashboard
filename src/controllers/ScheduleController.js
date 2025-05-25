@@ -43,6 +43,8 @@ class ScheduleController {
         ],
         bugCount: 0,
         qaCount: 0,
+        bugResolvedCount: 0,
+        qaResovledCount: 0,
         trackingIssues: [],
       });
       programs.push(program);
@@ -94,15 +96,22 @@ class ScheduleController {
         totalCount = response.data.total_count;
         offset += response.data.limit;
       } while (offset < totalCount);
-
+      allIssues = require('../tracking.json').issues;
       return allIssues.map((issue) => {
-        const moduleField = issue.custom_fields?.find(field => field.name === '発生PGID')?.value || '';
+        const moduleField = issue.custom_fields?.find(field => field.name === 'Module')?.value || '';
+        const fixMethod = issue.custom_fields?.find(field => field.name === 'Fix Method')?.value || '';
+        const questionVN = issue.custom_fields?.find(field => field.name === 'Question (VN)')?.value || '';
+        const questionJP = issue.custom_fields?.find(field => field.name === 'Question (JP)')?.value || '';
+        const answerJP = issue.custom_fields?.find(field => field.name === 'Answer (JP)')?.value || '';
+        const answerVN = issue.custom_fields?.find(field => field.name === 'Answer (VN)')?.value || '';
         return new TrackingIssue({
           issueId: issue.id,
+          qaNo: issue.custom_fields?.find(field => field.name === 'Q&A No.')?.value || '',
           subject: issue.subject,
           status: issue.status.name,
           priority: issue.priority.name,
           assignee: issue.assigned_to?.name || '',
+          author: issue.author?.name || '',
           createdOn: issue.created_on,
           updatedOn: issue.updated_on,
           trackerName: issue.tracker.name,
@@ -119,6 +128,11 @@ class ScheduleController {
           ) || [],
           projectId: issue.project.id,
           projectName: issue.project.name,
+          fixMethod: fixMethod,
+          questionVN: questionVN,
+          questionJP: questionJP,
+          answerJP: answerJP,
+          answerVN: answerVN,
         });
       });
     } catch (error) {
@@ -133,16 +147,16 @@ class ScheduleController {
       if (!issues || issues.length === 0) {
         return schedules;
       }
-      for (const schedule of schedules) {
-        schedule.trackingIssues = issues.filter(issue => issue.module === schedule.prgid);
-        schedule.bugCount = schedule.trackingIssues.filter(
-          issue => issue.trackerName === 'バグ'
-        ).length;
-        schedule.qaCount = schedule.trackingIssues.filter(
-          issue => issue.trackerName === 'Q&A'
-        ).length;
-      }
-      return schedules;
+      const updatedSchedules = schedules.map(schedule => {
+        //const schedule = raw instanceof Program ? raw : Program.fromJSON(raw);
+        schedule.trackingIssues = issues.filter(issue => issue.module?.includes(schedule.prgid)) || [];
+        schedule.bugCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.trackerName === 'Bug').length : 0;
+        schedule.qaCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.trackerName === 'Q&A').length : 0;
+        schedule.bugResolvedCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Bug').length : 0;
+        schedule.qaResolvedCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Q&A').length : 0;
+        return schedule;
+      });
+      return updatedSchedules;
     } catch (error) {
       console.error('Error updating schedules with issues:', error.message);
       return schedules;

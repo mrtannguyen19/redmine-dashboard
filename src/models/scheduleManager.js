@@ -14,35 +14,47 @@ class Attachment {
 class TrackingIssue {
   constructor(data) {
     this.issueId = data.issueId || 0;
+    this.qaNo = data.qaNo || '';
     this.subject = data.subject || '';
     this.status = data.status || '';
     this.priority = data.priority || '';
     this.assignee = data.assignee || '';
+    this.author = data.author || '';
     this.createdOn = data.createdOn || '';
-    this.updatedOn = data.updatedOn || '';
     this.description = data.description || '';
     this.attachments = data.attachments || [];
-    this.projectId = data.projectId || 0;
+    this.projectId = data.projectId || '';
     this.projectName = data.projectName || '';
     this.trackerName = data.trackerName || '';
     this.module = data.module || '';
+    this.fixMethod = data.fixMethod || '';
+    this.questionVN = data.questionVN || '';
+    this.questionJP = data.questionJP || '';
+    this.answerJP = data.answerJP || '';
+    this.answerVN =  data.answerVN || '';
   }
 
   static fromJSON(json) {
     return new TrackingIssue({
       issueId: json.issueId,
+      qaNo: json.qaNo,
       subject: json.subject,
       status: json.status,
       priority: json.priority,
       assignee: json.assignee,
+      author: json.author,
       createdOn: json.createdOn,
-      updatedOn: json.updatedOn,
       description: json.description,
-      attachments: json.attachments.map(att => Attachment.fromJSON(att)),
+      attachments: json.attachments ? json.attachments.map(att => Attachment.fromJSON(att)) : [],
       projectId: json.projectId,
       projectName: json.projectName,
       trackerName: json.trackerName,
       module: json.module,
+      fixMethod: json.fixMethod,
+      questionVN: json.questionVN,
+      questionJP: json.questionJP,
+      answerJP: json.answerJP,
+      answerVN: json.answerVN,
     });
   }
 }
@@ -76,9 +88,11 @@ class Program {
     this.prgname = data.prgname || '';
     this.frame = data.frame || '';
     this.phases = data.phases || [];
+    this.trackingIssues = data.trackingIssues || [];
     this.bugCount = data.bugCount || 0;
     this.qaCount = data.qaCount || 0;
-    this.trackingIssues = data.trackingIssues || [];
+    this.bugResolvedCount = data.bugResolvedCount || 0;
+    this.qaResolvedCount = data.qaResolvedCount || 0;
   }
 
   static fromJSON(json) {
@@ -87,11 +101,8 @@ class Program {
       prgname: json.prgname,
       frame: json.frame,
       phases: json.phases.map(p => Phase.fromJSON(p)),
-      bugCount: json.bugCount,
-      qaCount: json.qaCount,
-      trackingIssues: json.trackingIssues.map(i => TrackingIssue.fromJSON(i)),
+      trackingIssues: json.trackingIssues?json.trackingIssues.map(i => TrackingIssue.fromJSON(i)):[],
     });
   }
 }
-
 module.exports = { Program, Phase, TrackingIssue, Attachment };
