@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Button, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Container, Typography, Button, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 ModuleRegistry.registerModules([AllCommunityModule]);
+
 const SettingsPanel = ({ onBack }) => {
   const [projects, setProjects] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
@@ -17,6 +18,7 @@ const SettingsPanel = ({ onBack }) => {
     TestingPath: '',
     SchedulePath: '',
     ScheduleFileName: '',
+    scheduleFileNames: [], // Added to store the array of schedule file names
     TrackingURL: '',
     TrackingAPIKey: '',
     RedmineName: '',
@@ -50,10 +52,11 @@ const SettingsPanel = ({ onBack }) => {
           const paths = await window.electronAPI.computeProjectPaths(formData.RootPath);
           setFormData((prev) => ({
             ...prev,
-            DesignPath: paths.DesignPath,
-            TestingPath: paths.TestingPath,
-            SchedulePath: paths.SchedulePath,
-            ScheduleFileName: paths.ScheduleFileName
+            DesignPath: paths.DesignPath || '',
+            TestingPath: paths.TestingPath || '',
+            SchedulePath: paths.SchedulePath || '',
+            ScheduleFileName: Array.isArray(paths.ScheduleFileName) && paths.ScheduleFileName.length > 0 ? paths.ScheduleFileName[0] : '',
+            scheduleFileNames: Array.isArray(paths.ScheduleFileName) ? paths.ScheduleFileName : [] // Store the array
           }));
         } catch (error) {
           console.error('Error computing paths:', error.message);
@@ -69,7 +72,8 @@ const SettingsPanel = ({ onBack }) => {
           DesignPath: '',
           TestingPath: '',
           SchedulePath: '',
-          ScheduleFileName: ''
+          ScheduleFileName: '',
+          scheduleFileNames: [] // Reset when RootPath is empty
         }));
       }
     };
@@ -86,6 +90,7 @@ const SettingsPanel = ({ onBack }) => {
       TestingPath: '',
       SchedulePath: '',
       ScheduleFileName: '',
+      scheduleFileNames: [], // Initialize empty array
       TrackingURL: '',
       TrackingAPIKey: '',
       RedmineName: '',
@@ -105,6 +110,7 @@ const SettingsPanel = ({ onBack }) => {
       TestingPath: project.TestingPath || '',
       SchedulePath: project.SchedulePath || '',
       ScheduleFileName: project.ScheduleFileName || '',
+      scheduleFileNames: [], // Will be populated by useEffect if RootPath exists
       TrackingURL: project.TrackingURL || '',
       TrackingAPIKey: project.TrackingAPIKey || '',
       RedmineName: project.RedmineName || '',
@@ -147,13 +153,11 @@ const SettingsPanel = ({ onBack }) => {
     try {
       let updatedProjects;
       if (currentProject) {
-        // Update existing project by ProjectID
         updatedProjects = projects.map((p) =>
-          p.ProjectID === currentProject.ProjectID ? { ...formData } : p
+          p.ProjectID === currentProject.ProjectID ? { ...formData, scheduleFileNames: undefined } : p
         );
       } else {
-        // Add new project
-        updatedProjects = [...projects, { ...formData }];
+        updatedProjects = [...projects, { ...formData, scheduleFileNames: undefined }];
       }
       const success = await window.electronAPI.saveProjects(
         updatedProjects.map((p) => ({
@@ -341,7 +345,6 @@ const SettingsPanel = ({ onBack }) => {
                 value={formData.DesignPath}
                 onChange={handleFormChange}
                 fullWidth
-                disabled
               />
               <TextField
                 label="Testing Path"
@@ -349,7 +352,6 @@ const SettingsPanel = ({ onBack }) => {
                 value={formData.TestingPath}
                 onChange={handleFormChange}
                 fullWidth
-                disabled
               />
               <TextField
                 label="Schedule Path"
@@ -357,16 +359,28 @@ const SettingsPanel = ({ onBack }) => {
                 value={formData.SchedulePath}
                 onChange={handleFormChange}
                 fullWidth
-                disabled
               />
               <TextField
+                select
                 label="Schedule File Name"
                 name="ScheduleFileName"
                 value={formData.ScheduleFileName}
                 onChange={handleFormChange}
                 fullWidth
-                disabled
-              />
+                helperText={formData.scheduleFileNames.length === 0 ? 'No schedule files available' : 'Select a schedule file'}
+              >
+                {formData.scheduleFileNames.length > 0 ? (
+                  formData.scheduleFileNames.map((name) => (
+                    <MenuItem key={name} value={name}>
+                      {name}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem value="" disabled>
+                    No files available
+                  </MenuItem>
+                )}
+              </TextField>
               <TextField
                 label="Tracking URL"
                 name="TrackingURL"

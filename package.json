@@ -1,5 +1,5 @@
 {
-  "name": "redmine-dashboard",
+  "name": "Schedule dashboard",
   "version": "0.1.0",
   "homepage": "./",
   "private": true,
@@ -27,8 +27,26 @@
     "start": "npm run build && npm run electron",
     "react-start": "react-scripts start",
     "build": "react-scripts build",
-    "electron": "electron ."
+    "dist": "electron-builder",
+    "electron": "electron .",
+    "win-dist": "npm run build && electron-builder --win --x64"
   },
+  "build": {
+    "appId": "dept2.team2.7.Schedule-dashboard",
+    "productName": "Schedule Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "src/main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+  ,
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -48,6 +66,7 @@
     ]
   },
   "devDependencies": {
-    "electron": "^36.1.0"
+    "electron": "^36.1.0",
+    "electron-builder": "^26.0.12"
   }
 }

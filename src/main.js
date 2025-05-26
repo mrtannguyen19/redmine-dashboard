@@ -185,16 +185,16 @@ ipcMain.handle('compute-project-paths', async (event, rootPath) => {
     if (!fs.existsSync(rootPath)) {
       // throw new Error(`RootPath does not exist: ${rootPath}`);
     }
-    const designPath = path.join(rootPath, 'Design');
-    const testingPath = path.join(rootPath, 'Testing');
-    const schedulePath = path.join(rootPath, 'Schedule');
-    
-    let scheduleFileName = '';
+    const designPath = path.join(rootPath, '01_Development','01.02_Design');
+    const testingPath = path.join(rootPath, '01_Development','01.04_Testing');
+    const schedulePath = path.join(rootPath, '02_Management','02.02_Monitoring and Control','_Schedule (Internal)');
+   
+ 
+    let scheduleFileName = [];
     if (fs.existsSync(schedulePath)) {
-      const files = fs.readdirSync(schedulePath).filter(file => 
-        file.endsWith('.xlsx') || file.endsWith('.xls')
+      const files = fs.readdirSync(schedulePath).filter(file => file.endsWith('.xlsm')
       );
-      scheduleFileName = files.length > 0 ? files[0] : '';
+      scheduleFileName = files.length > 0 ? files:[];
     }
     
     return {
