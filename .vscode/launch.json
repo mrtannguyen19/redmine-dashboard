@@ -6,7 +6,7 @@
         "type": "node",
         "request": "launch",
         "name": "Debug Electron Main",
-        "program": "${workspaceFolder}/electron.js",
+        "program": "${workspaceFolder}/public/electron.js",
         "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
         "windows": {
           "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"

@@ -22,7 +22,7 @@
     "react-scripts": "5.0.1",
     "xlsx": "^0.18.5"
   },
-  "main": "electron.js",
+  "main": "public/electron.js",
   "scripts": {
     "start": "npm run build && npm run electron",
     "react-start": "react-scripts start",
