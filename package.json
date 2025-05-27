@@ -1,5 +1,5 @@
 {
-  "name": "Schedule dashboard",
+  "name": "redmine-dashboard",
   "version": "0.1.0",
   "homepage": "./",
   "private": true,
@@ -33,14 +33,14 @@
   },
   "build": {
     "appId": "dept2.team2.7.Schedule-dashboard",
-    "productName": "Schedule Dashboard",
+    "productName": "ScheduleDashboard",
     "directories": {
       "output": "dist"
     },
     "files": [
       "build/**/*",
       "src/main.js",
-      "package.json"
+      "./package.json"
     ],
     "win": {
       "target": "nsis"
