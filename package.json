@@ -22,7 +22,7 @@
     "react-scripts": "5.0.1",
     "xlsx": "^0.18.5"
   },
-  "main": "./src/main.js",
+  "main": "electron.js",
   "scripts": {
     "start": "npm run build && npm run electron",
     "react-start": "react-scripts start",
@@ -39,8 +39,8 @@
     },
     "files": [
       "build/**/*",
-      "src/main.js",
-      "./package.json"
+      "electron.js",
+      "package.json"
     ],
     "win": {
       "target": "nsis"

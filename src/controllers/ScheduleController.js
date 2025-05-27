@@ -96,7 +96,7 @@ class ScheduleController {
         totalCount = response.data.total_count;
         offset += response.data.limit;
       } while (offset < totalCount);
-      allIssues = require('../tracking.json').issues;
+      //allIssues = require('../tracking.json').issues;
       return allIssues.map((issue) => {
         const moduleField = issue.custom_fields?.find(field => field.name === 'Module')?.value || '';
         const fixMethod = issue.custom_fields?.find(field => field.name === 'Fix Method')?.value || '';

@@ -1,8 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const RedmineModel = require('./models/redmineModel');
-const ScheduleController = require('./controllers/ScheduleController');
+const RedmineModel = require('./src/models/redmineModel');
+const ScheduleController = require('./src/controllers/ScheduleController');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -26,7 +26,7 @@ function createWindow() {
     });
   });
 
-  win.loadFile(path.join(__dirname, '../build/index.html')).catch((err) => {
+  win.loadFile(path.join(__dirname, 'build/index.html')).catch((err) => {
     console.error('Error loading index.html:', err);
   });
 }
