@@ -1,14 +1,81 @@
-const fs = require('fs');
+const fs = require('fs').promises; // Sử dụng promises để xử lý bất đồng bộ
 const path = require('path');
 const { app } = require('electron');
 const axios = require('axios');
+const winston = require('winston'); // Thêm logger
 const importExcelFile = require('../models/excelImporter.js');
-const {
-  Program,
-  Phase,
-  TrackingIssue,
-  Attachment,
-} = require('../models/scheduleManager.js');
+const { Program, Phase, TrackingIssue, Attachment } = require('../models/scheduleManager.js');
+
+// Cấu hình logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: path.join(app.getPath('userData'), 'app.log') }),
+    new winston.transports.Console(),
+  ],
+});
+
+// Cấu hình storage
+const STORAGE_PATH = path.join(app.getPath('userData'), 'schedules.json');
+
+// Utility functions
+const parsePhaseData = (phaseName, phaseData = {}) => {
+  return new Phase({
+    phaseName,
+    deliveryDate: phaseData.deliveryDate || '',
+    baselineEffort: phaseData.baselineEffort || 0,
+    plannedStartDate: phaseData.plannedStartDate || '',
+    plannedEndDate: phaseData.plannedEndDate || '',
+    actualStartDate: phaseData.actualStartDate || '',
+    actualEndDate: phaseData.actualEndDate || '',
+    assignee: phaseData.assignee || '',
+    progress: phaseData.progress || 0,
+    actualEffort: phaseData.actualEffort || 0,
+    designPages: phaseData.designPages || 0,
+    testCases: phaseData.testCases || 0,
+    defects: phaseData.defects || 0,
+    notes: phaseData.notes || '',
+  });
+};
+
+const parseIssueData = (issue) => {
+  const customFieldValue = (fieldName) => issue.custom_fields?.find(field => field.name === fieldName)?.value || '';
+  
+  return new TrackingIssue({
+    issueId: issue.id,
+    qaNo: customFieldValue('Q&A No.'),
+    subject: issue.subject || '',
+    status: issue.status?.name || '',
+    priority: issue.priority?.name || '',
+    assignee: issue.assigned_to?.name || '',
+    author: issue.author?.name || '',
+    createdOn: issue.created_on || '',
+    updatedOn: issue.updated_on || '',
+    trackerName: issue.tracker?.name || '',
+    module: customFieldValue('Module'),
+    description: issue.description || '',
+    attachments: issue.attachments?.map(
+      (att) =>
+        new Attachment({
+          id: att.id,
+          filename: att.filename,
+          contentUrl: att.content_url,
+          createdOn: att.created_on,
+        })
+    ) || [],
+    projectId: issue.project?.id || '',
+    projectName: issue.project?.name || '',
+    fixMethod: customFieldValue('Fix Method'),
+    questionVN: customFieldValue('Question (VN)'),
+    questionJP: customFieldValue('Question (JP)'),
+    answerJP: customFieldValue('Answer (JP)'),
+    answerVN: customFieldValue('Answer (VN)'),
+  });
+};
 
 class ScheduleController {
   constructor(apiKey, baseUrl, trackingApiKey, trackingBaseUrl) {
@@ -16,70 +83,81 @@ class ScheduleController {
     this.baseUrl = baseUrl;
     this.trackingApiKey = trackingApiKey;
     this.trackingBaseUrl = trackingBaseUrl;
+    this.validateConfig();
+  }
+
+  // Kiểm tra cấu hình
+  validateConfig() {
+    if (!this.apiKey || !this.baseUrl || !this.trackingApiKey || !this.trackingBaseUrl) {
+      const error = new Error('Missing required configuration parameters');
+      logger.error(error.message);
+      throw error;
+    }
   }
 
   async importFromExcel(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+      const error = new Error('Invalid file path');
+      logger.error(error.message);
+      throw error;
+    }
+
     try {
+      logger.info(`Importing Excel file: ${filePath}`);
       const data = await importExcelFile(filePath);
-      return this.parseExcelData(data);
+      const programs = this.parseExcelData(data);
+      logger.info(`Imported ${programs.length} programs from ${filePath}`);
+      return programs;
     } catch (error) {
-      console.error('ScheduleController importFromExcel error:', error.message);
+      logger.error(`Failed to import Excel file: ${error.message}`);
       throw error;
     }
   }
 
   parseExcelData(excelData) {
-    const programs = [];
-    excelData.forEach((row) => {
-      const program = new Program({
+    if (!Array.isArray(excelData)) {
+      logger.error('Invalid Excel data format: Expected an array');
+      throw new Error('Invalid Excel data format');
+    }
+
+    return excelData.map((row, index) => {
+      if (!row.prgid || !row.prgname) {
+        logger.warn(`Skipping invalid row at index ${index}: Missing prgid or prgname`);
+        return null;
+      }
+
+      return new Program({
         prgid: row.prgid,
         prgname: row.prgname,
-        frame: row.frame,
+        frame: row.frame || '',
         phases: [
-          this.createPhase('Design', row.design),
-          this.createPhase('Review', row.review),
-          this.createPhase('Coding', row.coding),
-          this.createPhase('Testing', row.testing),
+          parsePhaseData('Design', row.design),
+          parsePhaseData('Review', row.review),
+          parsePhaseData('Coding', row.coding),
+          parsePhaseData('Testing', row.testing),
         ],
         bugCount: 0,
         qaCount: 0,
         bugResolvedCount: 0,
-        qaResovledCount: 0,
+        qaResolvedCount: 0,
         trackingIssues: [],
       });
-      programs.push(program);
-    });
-    return programs;
-  }
-
-  createPhase(phaseName, phaseData) {
-    return new Phase({
-      phaseName,
-      deliveryDate: phaseData?.deliveryDate || '',
-      baselineEffort: phaseData?.baselineEffort || 0,
-      plannedStartDate: phaseData?.plannedStartDate || '',
-      plannedEndDate: phaseData?.plannedEndDate || '',
-      actualStartDate: phaseData?.actualStartDate || '',
-      actualEndDate: phaseData?.actualEndDate || '',
-      assignee: phaseData?.assignee || '',
-      progress: phaseData?.progress || 0,
-      actualEffort: phaseData?.actualEffort || 0,
-      designPages: phaseData?.designPages || 0,
-      testCases: phaseData?.testCases || 0,
-      defects: phaseData?.defects || 0,
-      notes: phaseData?.notes || '',
-    });
+    }).filter(program => program !== null);
   }
 
   async fetchTrackingIssues(projectId, phaseName = null) {
+    if (!projectId) {
+      logger.error('Invalid project ID');
+      return [];
+    }
+
     try {
-      const params = new URLSearchParams();
-      params.append('project_id', projectId);
-      if (phaseName) {
-        params.append('cf_phase', phaseName);
-      }
-      params.append('status_id', '*');
-      params.append('limit', 100);
+      logger.info(`Fetching tracking issues for project ${projectId}${phaseName ? `, phase: ${phaseName}` : ''}`);
+      const params = new URLSearchParams({
+        project_id: projectId,
+        status_id: '*',
+        limit: '100',
+      });
 
       let allIssues = [];
       let offset = 0;
@@ -90,100 +168,88 @@ class ScheduleController {
         const url = `${this.trackingBaseUrl}/issues.json?${params.toString()}`;
         const response = await axios.get(url, {
           headers: { 'X-Redmine-API-Key': this.trackingApiKey },
+          timeout: 10000, // Thêm timeout
         });
 
         allIssues = [...allIssues, ...response.data.issues];
         totalCount = response.data.total_count;
         offset += response.data.limit;
       } while (offset < totalCount);
-      allIssues = require('../tracking.json').issues;
-      return allIssues.map((issue) => {
-        const moduleField = issue.custom_fields?.find(field => field.name === 'Module')?.value || '';
-        const fixMethod = issue.custom_fields?.find(field => field.name === 'Fix Method')?.value || '';
-        const questionVN = issue.custom_fields?.find(field => field.name === 'Question (VN)')?.value || '';
-        const questionJP = issue.custom_fields?.find(field => field.name === 'Question (JP)')?.value || '';
-        const answerJP = issue.custom_fields?.find(field => field.name === 'Answer (JP)')?.value || '';
-        const answerVN = issue.custom_fields?.find(field => field.name === 'Answer (VN)')?.value || '';
-        return new TrackingIssue({
-          issueId: issue.id,
-          qaNo: issue.custom_fields?.find(field => field.name === 'Q&A No.')?.value || '',
-          subject: issue.subject,
-          status: issue.status.name,
-          priority: issue.priority.name,
-          assignee: issue.assigned_to?.name || '',
-          author: issue.author?.name || '',
-          createdOn: issue.created_on,
-          updatedOn: issue.updated_on,
-          trackerName: issue.tracker.name,
-          module: moduleField,
-          description: issue.description || '',
-          attachments: issue.attachments?.map(
-            (att) =>
-              new Attachment({
-                id: att.id,
-                filename: att.filename,
-                contentUrl: att.content_url,
-                createdOn: att.created_on,
-              })
-          ) || [],
-          projectId: issue.project.id,
-          projectName: issue.project.name,
-          fixMethod: fixMethod,
-          questionVN: questionVN,
-          questionJP: questionJP,
-          answerJP: answerJP,
-          answerVN: answerVN,
-        });
-      });
+
+      const parsedIssues = allIssues.map(parseIssueData);
+      logger.info(`Fetched ${parsedIssues.length} issues for project ${projectId}`);
+      return parsedIssues;
     } catch (error) {
-      console.error('Error fetching Tracking issues:', error.message);
+      logger.error(`Failed to fetch tracking issues: ${error.message}`);
       return [];
     }
   }
 
   async updateSchedulesWithIssues(schedules, project) {
+    if (!project?.ProjectID || !Array.isArray(schedules)) {
+      logger.error('Invalid project or schedules');
+      return schedules;
+    }
+
     try {
+      logger.info(`Updating schedules with issues for project ${project.ProjectID}`);
       const issues = await this.fetchTrackingIssues(project.ProjectID);
-      if (!issues || issues.length === 0) {
+      if (!issues.length) {
+        logger.warn(`No issues found for project ${project.ProjectID}`);
         return schedules;
       }
+
       const updatedSchedules = schedules.map(schedule => {
-        //const schedule = raw instanceof Program ? raw : Program.fromJSON(raw);
-        schedule.trackingIssues = issues.filter(issue => issue.module?.includes(schedule.prgid)) || [];
-        schedule.bugCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.trackerName === 'Bug').length : 0;
-        schedule.qaCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.trackerName === 'Q&A').length : 0;
-        schedule.bugResolvedCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Bug').length : 0;
-        schedule.qaResolvedCount = schedule.trackingIssues.length > 0 ? schedule.trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Q&A').length : 0;
-        return schedule;
+        const trackingIssues = issues.filter(issue => issue.module?.includes(schedule.prgid)) || [];
+        return new Program({
+          ...schedule,
+          trackingIssues,
+          bugCount: trackingIssues.filter(issue => issue.trackerName === 'Bug').length,
+          qaCount: trackingIssues.filter(issue => issue.trackerName === 'Q&A').length,
+          bugResolvedCount: trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Bug').length,
+          qaResolvedCount: trackingIssues.filter(issue => issue.status === 'Resolved' && issue.trackerName === 'Q&A').length,
+        });
       });
+
+      logger.info(`Updated ${updatedSchedules.length} schedules with ${issues.length} issues`);
       return updatedSchedules;
     } catch (error) {
-      console.error('Error updating schedules with issues:', error.message);
+      logger.error(`Failed to update schedules with issues: ${error.message}`);
       return schedules;
     }
   }
 
   async saveToStorage(programs) {
+    if (!Array.isArray(programs)) {
+      logger.error('Invalid programs data: Expected an array');
+      throw new Error('Invalid programs data');
+    }
+
     try {
-      const storagePath = path.join(app.getPath('userData'), 'schedules.json');
-      fs.writeFileSync(storagePath, JSON.stringify(programs, null, 2));
+      logger.info(`Saving ${programs.length} programs to storage: ${STORAGE_PATH}`);
+      await fs.writeFile(STORAGE_PATH, JSON.stringify(programs, null, 2));
+      logger.info('Successfully saved programs to storage');
       return true;
     } catch (error) {
-      console.error('Error saving schedules to storage:', error.message);
+      logger.error(`Failed to save programs to storage: ${error.message}`);
       throw error;
     }
   }
 
   async getFromStorage() {
     try {
-      const storagePath = path.join(app.getPath('userData'), 'schedules.json');
-      if (fs.existsSync(storagePath)) {
-        const data = fs.readFileSync(storagePath, 'utf8');
-        return JSON.parse(data).map(p => Program.fromJSON(p));
+      logger.info(`Reading programs from storage: ${STORAGE_PATH}`);
+      if (!await fs.access(STORAGE_PATH).then(() => true).catch(() => false)) {
+        logger.warn('Storage file does not exist');
+        return [];
       }
-      return [];
+
+      const data = await fs.readFile(STORAGE_PATH, 'utf8');
+      const programs = JSON.parse(data).map(p => Program.fromJSON(p));
+      logger.info(`Loaded ${programs.length} programs from storage`);
+      return programs;
     } catch (error) {
-      console.error('Error reading schedules from storage:', error.message);
+      logger.error(`Failed to read programs from storage: ${error.message}`);
       throw error;
     }
   }
